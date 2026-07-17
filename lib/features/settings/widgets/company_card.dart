@@ -68,7 +68,7 @@ class CompanyCard extends StatelessWidget {
                 ),
               ),
               title: Text("Departemen"),
-              subtitle: Text("Maintenance Engineering"),
+              subtitle: Text("Sustainable Biomaterial"),
             ),
 
             const Divider(),
@@ -83,7 +83,7 @@ class CompanyCard extends StatelessWidget {
                 ),
               ),
               title: Text("Lokasi"),
-              subtitle: Text("Terbanggi Besar, Lampung"),
+              subtitle: Text("Terbanggi Besar, Lampung Tengah"),
             ),
 
             const Divider(),

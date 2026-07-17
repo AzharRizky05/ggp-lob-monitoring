@@ -5,8 +5,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../../shared/widgets/layout/app_layout.dart';
 
+import '../widgets/admin_dashboard_content.dart';
 import '../widgets/approval_pending_card.dart';
-import '../widgets/batch_status_chart.dart';
 import '../widgets/dashboard_grid.dart';
 import '../widgets/dashboard_header.dart';
 import '../widgets/operator_dashboard_content.dart';
@@ -129,54 +129,11 @@ class _DashboardPageState extends State<DashboardPage> {
           }
 
           /// ======================================================
-          /// ADMINISTRATOR
+          /// ADMINISTRATOR (default/fallback)
           /// ======================================================
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const DashboardHeader(),
-
-                const SizedBox(height: 30),
-
-                DashboardGrid(
-                  summary: data?.summary,
-                  loading: provider.loading,
-                ),
-
-                const SizedBox(height: 30),
-
-                ProductionChart(
-                  points:
-                      data?.monthlyProduction ?? const [],
-                  loading: provider.loading,
-                ),
-
-                const SizedBox(height: 30),
-
-                BatchStatusChart(
-                  summary: data?.summary,
-                  loading: provider.loading,
-                ),
-
-                const SizedBox(height: 30),
-
-                ApprovalPendingCard(
-                  pendingCount:
-                      data?.summary.pendingApprovals ?? 0,
-                  loading: provider.loading,
-                ),
-
-                const SizedBox(height: 30),
-
-                RecentActivity(
-                  items:
-                      data?.recentBatches ?? const [],
-                  loading: provider.loading,
-                ),
-              ],
-            ),
+          return AdminDashboardContent(
+            data: data,
+            loading: provider.loading,
           );
         },
       ),

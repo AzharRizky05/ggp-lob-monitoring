@@ -2,26 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/approval_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../models/approval_model.dart';
+import 'batch_timeline.dart';
 
 class ApprovalActionDialog extends StatefulWidget {
   final ApprovalModel approval;
 
-  const ApprovalActionDialog({
-    super.key,
-    required this.approval,
-  });
+  const ApprovalActionDialog({super.key, required this.approval});
 
   @override
-  State<ApprovalActionDialog> createState() =>
-      _ApprovalActionDialogState();
+  State<ApprovalActionDialog> createState() => _ApprovalActionDialogState();
 }
 
-class _ApprovalActionDialogState
-    extends State<ApprovalActionDialog> {
-  final TextEditingController _noteController =
-      TextEditingController();
-
+class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
+  final TextEditingController _noteController = TextEditingController();
   bool _loading = false;
 
   @override
@@ -30,79 +25,75 @@ class _ApprovalActionDialogState
     super.dispose();
   }
 
-  Future<void> _approve() async {
-    setState(() {
-      _loading = true;
-    });
+  String? _currentSupervisorId(BuildContext context) {
+    return context.read<AuthProvider>().userProfile?.id;
+  }
 
+  Future<void> _approve() async {
+    final supervisorId = _currentSupervisorId(context);
+    if (supervisorId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sesi supervisor tidak ditemukan.")),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
     final provider = context.read<ApprovalProvider>();
 
     final success = await provider.approveBatch(
-      widget.approval.batchId,
+      batchId: widget.approval.batchId,
+      supervisorId: supervisorId,
+      notes: _noteController.text.trim(),
     );
 
     if (!mounted) return;
-
-    setState(() {
-      _loading = false;
-    });
+    setState(() => _loading = false);
 
     if (success) {
       Navigator.pop(context);
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Batch berhasil disetujui.",
-          ),
-        ),
+        const SnackBar(content: Text("Batch berhasil disetujui.")),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            provider.errorMessage ??
-                "Gagal melakukan approval.",
-          ),
+          content: Text(provider.errorMessage ?? "Gagal melakukan approval."),
         ),
       );
     }
   }
 
   Future<void> _reject() async {
-    setState(() {
-      _loading = true;
-    });
+    final supervisorId = _currentSupervisorId(context);
+    if (supervisorId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sesi supervisor tidak ditemukan.")),
+      );
+      return;
+    }
 
+    setState(() => _loading = true);
     final provider = context.read<ApprovalProvider>();
 
     final success = await provider.rejectBatch(
-      widget.approval.batchId,
+      batchId: widget.approval.batchId,
+      supervisorId: supervisorId,
+      notes: _noteController.text.trim(),
     );
 
     if (!mounted) return;
-
-    setState(() {
-      _loading = false;
-    });
+    setState(() => _loading = false);
 
     if (success) {
       Navigator.pop(context);
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Batch berhasil ditolak.",
-          ),
-        ),
+        const SnackBar(content: Text("Batch berhasil ditolak.")),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            provider.errorMessage ??
-                "Gagal melakukan reject.",
-          ),
+          content: Text(provider.errorMessage ?? "Gagal melakukan reject."),
         ),
       );
     }
@@ -113,15 +104,16 @@ class _ApprovalActionDialogState
     final item = widget.approval;
 
     return AlertDialog(
-      title: const Text(
-        "Approval Batch Produksi",
-      ),
+      title: const Text("Approval Batch Produksi"),
       content: SizedBox(
-        width: 520,
+        width: 560,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              BatchTimeline(status: item.status),
+              const SizedBox(height: 20),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.qr_code),
@@ -146,9 +138,7 @@ class _ApprovalActionDialogState
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.science_outlined),
                 title: const Text("pH Akhir"),
-                subtitle: Text(
-                  item.ph.toStringAsFixed(2),
-                ),
+                subtitle: Text(item.ph.toStringAsFixed(2)),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -160,11 +150,7 @@ class _ApprovalActionDialogState
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.note_alt_outlined),
                 title: const Text("Catatan QC"),
-                subtitle: Text(
-                  item.qcNotes.isEmpty
-                      ? "-"
-                      : item.qcNotes,
-                ),
+                subtitle: Text(item.qcNotes.isEmpty ? "-" : item.qcNotes),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -181,28 +167,22 @@ class _ApprovalActionDialogState
       ),
       actions: [
         TextButton(
-          onPressed: _loading
-              ? null
-              : () => Navigator.pop(context),
+          onPressed: _loading ? null : () => Navigator.pop(context),
           child: const Text("Batal"),
         ),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.red,
+        if (item.status == 'QC Passed') ...[
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: _loading ? null : _reject,
+            icon: const Icon(Icons.close),
+            label: const Text("Reject"),
           ),
-          onPressed: _loading
-              ? null
-              : _reject,
-          icon: const Icon(Icons.close),
-          label: const Text("Reject"),
-        ),
-        FilledButton.icon(
-          onPressed: _loading
-              ? null
-              : _approve,
-          icon: const Icon(Icons.check),
-          label: const Text("Approve"),
-        ),
+          FilledButton.icon(
+            onPressed: _loading ? null : _approve,
+            icon: const Icon(Icons.check),
+            label: const Text("Approve"),
+          ),
+        ],
       ],
     );
   }
