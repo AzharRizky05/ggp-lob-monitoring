@@ -6,9 +6,9 @@ class ApprovalHistoryModel {
   final String operatorName;
   final String supervisorId;
   final String supervisorName;
-  final String status;
-  final String notes;
-  final DateTime approvedAt;
+  final String approvalStatus;
+  final String comments;
+  final DateTime? approvedAt;
 
   const ApprovalHistoryModel({
     required this.id,
@@ -18,8 +18,8 @@ class ApprovalHistoryModel {
     required this.operatorName,
     required this.supervisorId,
     required this.supervisorName,
-    required this.status,
-    required this.notes,
+    required this.approvalStatus,
+    required this.comments,
     required this.approvedAt,
   });
 
@@ -35,12 +35,11 @@ class ApprovalHistoryModel {
       operatorName: (map['operator_name'] ?? '-').toString(),
       supervisorId: (map['supervisor_id'] ?? '').toString(),
       supervisorName: (map['supervisor_name'] ?? '-').toString(),
-      status: (map['status'] ?? '-').toString(),
-      notes: (map['notes'] ?? '').toString(),
-      approvedAt: DateTime.tryParse(
-            map['approved_at']?.toString() ?? '',
-          ) ??
-          DateTime.now(),
+      approvalStatus: (map['approval_status'] ?? 'Waiting').toString(),
+      comments: (map['comments'] ?? '').toString(),
+      approvedAt: map['approved_at'] != null
+          ? DateTime.tryParse(map['approved_at'].toString())
+          : null,
     );
   }
 }

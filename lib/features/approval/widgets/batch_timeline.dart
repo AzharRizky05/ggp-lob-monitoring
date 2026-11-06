@@ -1,61 +1,47 @@
 import 'package:flutter/material.dart';
 
-/// Timeline visual alur produksi:
-/// Dibuat -> Produksi -> Menunggu QC -> QC -> Approval -> Selesai
-/// Menyorot tahap gagal (QC Failed / Rejected) dengan warna merah.
+/// Timeline ringkas alur batch:
+/// Produksi -> QC Pending -> Hasil QC -> Menunggu Approval -> Hasil Approval -> Selesai
+/// Lebar tiap tahap menyesuaikan ruang yang tersedia, jadi semua tahap selalu terlihat.
 class BatchTimeline extends StatelessWidget {
   final String status;
 
   const BatchTimeline({super.key, required this.status});
 
   static const List<String> _labels = [
-    'Dibuat',
     'Produksi',
-    'Menunggu QC',
-    'Quality Control',
-    'Approval',
+    'QC Pending',
+    'Hasil QC',
+    'Menunggu Approval',
+    'Hasil Approval',
     'Selesai',
   ];
 
   static const List<IconData> _icons = [
-    Icons.edit_note,
     Icons.precision_manufacturing_outlined,
     Icons.hourglass_top,
-    Icons.science_outlined,
+    Icons.verified_outlined,
+    Icons.hourglass_bottom,
     Icons.fact_check_outlined,
     Icons.task_alt,
   ];
 
   int get _currentIndex {
     switch (status) {
-      case 'Draft':
-        return 0;
-
-      // Tahap produksi (Monitoring) - semua sub-status masuk stage "Produksi"
-      case 'Preparation':
-      case 'Mixing':
-      case 'Fermentation':
-      case 'Filtering':
-      case 'Packaging':
-        return 1;
-
       case 'QC Pending':
-        return 2;
-
+        return 1;
       case 'QC Passed':
       case 'QC Failed':
-        return 3;
-
+        return 2;
       case 'Waiting Approval':
-      case 'Approved':
+        return 3;
       case 'Rejected':
         return 4;
-
+      case 'Approved':
       case 'Completed':
-        return 5;
-
+        return 5; // Approve = produksi selesai
       default:
-        return 0;
+        return 0; // Draft sampai Packaging = tahap produksi
     }
   }
 
@@ -66,77 +52,70 @@ class BatchTimeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final current = _currentIndex;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: IntrinsicWidth(
-        child: Row(
-          children: List.generate(_labels.length, (index) {
-            final isDone = index < current;
-            final isCurrent = index == current;
-            final isFailedStep = isCurrent && _isFailedAtCurrentStage;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(_labels.length, (index) {
+        final isDone = index < current;
+        final isCurrent = index == current;
+        final isFailed = isCurrent && _isFailedAtCurrentStage;
 
-            Color color;
-            if (isFailedStep) {
-              color = Colors.red;
-            } else if (isDone || isCurrent) {
-              color = Colors.green;
-            } else {
-              color = Colors.grey.shade300;
-            }
+        final Color color;
+        if (isFailed) {
+          color = Colors.red;
+        } else if (isDone || isCurrent) {
+          color = Colors.green;
+        } else {
+          color = Colors.grey.shade300;
+        }
 
-            return SizedBox(
-              width: 110,
-              child: Column(
+        return Expanded(
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: index == 0
-                            ? const SizedBox()
-                            : Container(
-                                height: 2,
-                                color: (isDone || isCurrent)
-                                    ? Colors.green
-                                    : Colors.grey.shade300,
-                              ),
-                      ),
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: color,
-                        child: Icon(
-                          isFailedStep ? Icons.close : _icons[index],
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Expanded(
-                        child: index == _labels.length - 1
-                            ? const SizedBox()
-                            : Container(
-                                height: 2,
-                                color:
-                                    isDone ? Colors.green : Colors.grey.shade300,
-                              ),
-                      ),
-                    ],
+                  Expanded(
+                    child: index == 0
+                        ? const SizedBox()
+                        : Container(
+                            height: 2,
+                            color: (isDone || isCurrent)
+                                ? Colors.green
+                                : Colors.grey.shade300,
+                          ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _labels[index],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight:
-                          isCurrent ? FontWeight.bold : FontWeight.normal,
-                      color: isFailedStep ? Colors.red : Colors.black87,
+                  CircleAvatar(
+                    radius: 15,
+                    backgroundColor: color,
+                    child: Icon(
+                      isFailed ? Icons.close : _icons[index],
+                      size: 15,
+                      color: Colors.white,
                     ),
+                  ),
+                  Expanded(
+                    child: index == _labels.length - 1
+                        ? const SizedBox()
+                        : Container(
+                            height: 2,
+                            color: isDone ? Colors.green : Colors.grey.shade300,
+                          ),
                   ),
                 ],
               ),
-            );
-          }),
-        ),
-      ),
+              const SizedBox(height: 6),
+              Text(
+                _labels[index],
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  color: isFailed ? Colors.red : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 }

@@ -13,7 +13,7 @@ class ApprovalHistoryTable extends StatefulWidget {
 }
 
 class _ApprovalHistoryTableState extends State<ApprovalHistoryTable> {
-  static const _statusOptions = ['Semua', 'Approved', 'Rejected', 'Completed'];
+  static const _statusOptions = ['Semua', 'Approved', 'Rejected'];
 
   @override
   void initState() {
@@ -32,10 +32,7 @@ class _ApprovalHistoryTableState extends State<ApprovalHistoryTable> {
           children: [
             Row(
               children: [
-                const Text(
-                  "Filter Status",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                const Text("Filter Status", style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(width: 12),
                 DropdownButton<String>(
                   value: provider.historyStatusFilter,
@@ -43,9 +40,7 @@ class _ApprovalHistoryTableState extends State<ApprovalHistoryTable> {
                       .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                       .toList(),
                   onChanged: (value) {
-                    if (value != null) {
-                      provider.loadApprovalHistory(status: value);
-                    }
+                    if (value != null) provider.loadApprovalHistory(status: value);
                   },
                 ),
               ],
@@ -99,11 +94,13 @@ class _ApprovalHistoryTableState extends State<ApprovalHistoryTable> {
               cells: [
                 DataCell(Text(item.batchCode)),
                 DataCell(Text(item.operatorName)),
-                DataCell(ApprovalStatusChip(status: item.status)),
+                DataCell(ApprovalStatusChip(status: item.approvalStatus)),
                 DataCell(Text(item.supervisorName)),
                 DataCell(
                   Text(
-                    "${item.approvedAt.day}/${item.approvedAt.month}/${item.approvedAt.year}",
+                    item.approvedAt == null
+                        ? "-"
+                        : "${item.approvedAt!.day}/${item.approvedAt!.month}/${item.approvedAt!.year}",
                   ),
                 ),
                 DataCell(

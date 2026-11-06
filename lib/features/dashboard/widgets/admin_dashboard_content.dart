@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../models/dashboard_data.dart';
 import 'approval_pending_card.dart';

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_name.dart';
 import '../../../core/theme/app_colors.dart';
 
 class ApprovalPendingCard extends StatelessWidget {
@@ -14,13 +16,17 @@ class ApprovalPendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final approvals = [
-      (
-        batch: "Pending Approval",
-        operator: loading ? "Memuat" : "Total: $pendingCount",
-        tahap: loading ? "Sedang memuat data" : "Menunggu supervisor",
-      ),
-    ];
+    final hasPending = pendingCount > 0;
+    final accent = hasPending ? Colors.orange : Colors.green;
+
+    final String message;
+    if (loading) {
+      message = "Memuat data approval...";
+    } else if (hasPending) {
+      message = "$pendingCount batch menunggu keputusan Supervisor.";
+    } else {
+      message = "Tidak ada batch yang menunggu approval.";
+    }
 
     return Card(
       elevation: 2,
@@ -49,65 +55,33 @@ class ApprovalPendingCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 18),
-
-            ...approvals.map(
-              (item) => Card(
-                elevation: 0,
-                color: Colors.grey.shade50,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.batch,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      Text("Operator : ${item.operator}"),
-                      Text("Tahapan : ${item.tahap}"),
-
-                      const SizedBox(height: 14),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: () {},
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.green,
-                              ),
-                              icon: const Icon(Icons.check),
-                              label: const Text("Approve"),
-                            ),
-                          ),
-
-                          const SizedBox(width: 10),
-
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {},
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                              ),
-                              icon: const Icon(Icons.close),
-                              label: const Text("Reject"),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: accent.withValues(alpha: 0.15),
+                  child: Icon(
+                    hasPending
+                        ? Icons.pending_actions_outlined
+                        : Icons.check_circle_outline,
+                    color: accent,
                   ),
                 ),
-              ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                FilledButton.icon(
+                  onPressed: () => context.go(RouteName.approval),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text("Buka Approval"),
+                ),
+              ],
             ),
           ],
         ),

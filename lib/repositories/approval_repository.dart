@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/services/supabase_service.dart';
-import '../features/approval/models/approval_model.dart';
+import '../core/workflows/approval_workflow.dart';
 import '../features/approval/models/approval_history_model.dart';
+import '../features/approval/models/approval_model.dart';
 import '../features/approval/models/production_history_model.dart';
 
 class ApprovalRepository {
@@ -10,222 +12,158 @@ class ApprovalRepository {
 
   final SupabaseClient _client = SupabaseService.client;
 
-  /// Batch dengan status QC Passed (belum diputuskan) ATAU Approved (menunggu Complete)
-  Future<List<ApprovalModel>> getPendingApprovals() async {
-    final response = await _client
+  /// Batch yang menunggu keputusan Supervisor.
+  Future<List<ApprovalModel>> getApprovalList() async {
+    final batches = await _client
         .from('production_batches')
-        .select('''
-          *,
-          users!production_batches_operator_id_fkey(
-            full_name
-          ),
-          quality_controls(*)
-        ''')
-        .inFilter('status', ['QC Passed', 'Approved'])
-        .order('updated_at', ascending: false);
+        .select()
+        .eq('status', ApprovalWorkflow.waitingStatus)
+        .order('production_date', ascending: false);
 
-    return (response as List).map((e) {
-      final map = Map<String, dynamic>.from(e);
-      return ApprovalModel.fromMap(map);
-    }).toList();
+    final List<ApprovalModel> approvals = [];
+    for (final item in batches as List) {
+      final batch = Map<String, dynamic>.from(item);
+
+      final user = await _client
+          .from('users')
+          .select('full_name')
+          .eq('id', batch['operator_id'])
+          .maybeSingle();
+
+      final qc = await _client
+          .from('quality_controls')
+          .select('id, ph, result, notes, inspection_date')
+          .eq('batch_id', batch['id'])
+          .maybeSingle();
+
+      approvals.add(
+        ApprovalModel.fromMap({
+          ...batch,
+          'users': user,
+          'quality_controls': qc,
+        }),
+      );
+    }
+
+    return approvals;
   }
 
-  Future<ApprovalModel?> getPendingApprovalByBatchId(String batchId) async {
-    final response = await _client
-        .from('production_batches')
-        .select('''
-          *,
-          users!production_batches_operator_id_fkey(
-            full_name
-          ),
-          quality_controls(*)
-        ''')
-        .eq('id', batchId)
-        .maybeSingle();
-
-    if (response == null) return null;
-
-    return ApprovalModel.fromMap(Map<String, dynamic>.from(response));
-  }
-
-  /// Riwayat keputusan Approve / Reject / Completed
-  /// Status yang ditampilkan diambil dari status BATCH saat ini (bukan approval_status),
-  /// supaya filter 'Completed' juga bisa jalan (approvals.approval_status tidak pernah
-  /// berubah jadi 'Completed', yang berubah adalah production_batches.status).
-  Future<List<ApprovalHistoryModel>> getApprovalHistory({
-    String status = 'Semua',
+  /// Riwayat keputusan Supervisor (Approved / Rejected) dari tabel `approvals`.
+  Future<List<ApprovalHistoryModel>> getApprovalHistoryList({
+    String? statusFilter,
   }) async {
-    final response = await _client
-        .from('approvals')
-        .select('''
-          *,
-          production_batches!approvals_batch_id_fkey(
-            batch_code,
-            production_date,
-            status,
-            users!production_batches_operator_id_fkey(
-              full_name
-            )
-          ),
-          users!approvals_supervisor_id_fkey(
-            full_name
-          )
-        ''')
-        .neq('approval_status', 'Waiting')
-        .order('approved_at', ascending: false);
+    var query = _client.from('approvals').select();
 
-    final all = (response as List).map((e) {
-      final map = Map<String, dynamic>.from(e);
+    if (statusFilter != null && statusFilter != 'Semua') {
+      query = query.eq('approval_status', statusFilter);
+    } else {
+      query = query.neq('approval_status', 'Waiting');
+    }
 
-      final batch = map['production_batches'] != null
-          ? Map<String, dynamic>.from(map['production_batches'])
-          : <String, dynamic>{};
+    final rows = await query.order('approved_at', ascending: false);
 
-      final operator = batch['users'] != null
-          ? Map<String, dynamic>.from(batch['users'])
-          : <String, dynamic>{};
+    final List<ApprovalHistoryModel> histories = [];
+    for (final item in rows as List) {
+      final approval = Map<String, dynamic>.from(item);
 
-      final supervisor = map['users'] != null
-          ? Map<String, dynamic>.from(map['users'])
-          : <String, dynamic>{};
+      final batch = await _client
+          .from('production_batches')
+          .select('batch_code, production_date, operator_id')
+          .eq('id', approval['batch_id'])
+          .maybeSingle();
 
-      final flat = {
-        'id': map['id'],
-        'batch_id': map['batch_id'],
-        'batch_code': batch['batch_code'],
-        'production_date': batch['production_date'],
-        'operator_name': operator['full_name'],
-        'supervisor_id': map['supervisor_id'],
-        'supervisor_name': supervisor['full_name'],
-        'status': batch['status'] ?? map['approval_status'],
-        'notes': map['comments'],
-        'approved_at': map['approved_at'],
-      };
+      String operatorName = '-';
+      if (batch != null && batch['operator_id'] != null) {
+        final operator = await _client
+            .from('users')
+            .select('full_name')
+            .eq('id', batch['operator_id'])
+            .maybeSingle();
+        operatorName = (operator?['full_name'] ?? '-').toString();
+      }
 
-      return ApprovalHistoryModel.fromMap(flat);
-    }).toList();
+      String supervisorName = '-';
+      if (approval['supervisor_id'] != null) {
+        final supervisor = await _client
+            .from('users')
+            .select('full_name')
+            .eq('id', approval['supervisor_id'])
+            .maybeSingle();
+        supervisorName = (supervisor?['full_name'] ?? '-').toString();
+      }
 
-    if (status == 'Semua') return all;
+      histories.add(
+        ApprovalHistoryModel.fromMap({
+          ...approval,
+          'batch_code': batch?['batch_code'],
+          'production_date': batch?['production_date'],
+          'operator_name': operatorName,
+          'supervisor_name': supervisorName,
+        }),
+      );
+    }
 
-    return all.where((item) => item.status == status).toList();
+    return histories;
   }
 
-  /// Arsip batch yang sudah Completed dari tabel production_history
-  Future<List<ProductionHistoryModel>> getProductionHistory() async {
-    final response = await _client
+  /// Riwayat produksi selesai dari tabel `production_history`.
+  Future<List<ProductionHistoryModel>> getProductionHistoryList() async {
+    final rows = await _client
         .from('production_history')
-        .select('''
-          *,
-          production_batches!production_history_batch_id_fkey(
-            batch_code,
-            production_date,
-            shift,
-            tank,
-            users!production_batches_operator_id_fkey(
-              full_name
-            )
-          ),
-          users!production_history_approved_by_fkey(
-            full_name
-          )
-        ''')
+        .select()
         .order('completed_at', ascending: false);
 
-    return (response as List).map((e) {
-      final map = Map<String, dynamic>.from(e);
+    final List<ProductionHistoryModel> result = [];
+    for (final item in rows as List) {
+      final history = Map<String, dynamic>.from(item);
 
-      final batch = map['production_batches'] != null
-          ? Map<String, dynamic>.from(map['production_batches'])
-          : <String, dynamic>{};
+      final batch = await _client
+          .from('production_batches')
+          .select('batch_code, operator_id')
+          .eq('id', history['batch_id'])
+          .maybeSingle();
 
-      final operator = batch['users'] != null
-          ? Map<String, dynamic>.from(batch['users'])
-          : <String, dynamic>{};
+      String operatorName = '-';
+      if (batch != null && batch['operator_id'] != null) {
+        final operator = await _client
+            .from('users')
+            .select('full_name')
+            .eq('id', batch['operator_id'])
+            .maybeSingle();
+        operatorName = (operator?['full_name'] ?? '-').toString();
+      }
 
-      final approver = map['users'] != null
-          ? Map<String, dynamic>.from(map['users'])
-          : <String, dynamic>{};
+      String approvedByName = '-';
+      if (history['approved_by'] != null) {
+        final approver = await _client
+            .from('users')
+            .select('full_name')
+            .eq('id', history['approved_by'])
+            .maybeSingle();
+        approvedByName = (approver?['full_name'] ?? '-').toString();
+      }
 
-      final flat = {
-        ...map,
-        'batch_code': batch['batch_code'],
-        'production_date': batch['production_date'],
-        'shift': batch['shift'],
-        'tank': batch['tank'],
-        'operator_name': operator['full_name'],
-        'approver_name': approver['full_name'],
-      };
+      result.add(
+        ProductionHistoryModel.fromMap({
+          ...history,
+          'batch_code': batch?['batch_code'],
+          'operator_name': operatorName,
+          'approved_by_name': approvedByName,
+        }),
+      );
+    }
 
-      return ProductionHistoryModel.fromMap(flat);
-    }).toList();
+    return result;
   }
 
-  /// Supervisor menyetujui batch
+  /// APPROVE = produksi selesai:
+  /// catat keputusan, ubah batch jadi Completed, masuk Production History.
   Future<void> approveBatch({
     required String batchId,
     required String supervisorId,
-    String? notes,
+    String comments = '',
   }) async {
-    final now = DateTime.now().toIso8601String();
-
-    await _client.from('approvals').upsert({
-      'batch_id': batchId,
-      'supervisor_id': supervisorId,
-      'approval_status': 'Approved',
-      'comments': notes,
-      'approved_at': now,
-    }, onConflict: 'batch_id');
-
-    await _client
-        .from('production_batches')
-        .update({
-          'status': 'Approved',
-          'updated_at': now,
-        })
-        .eq('id', batchId);
-  }
-
-  /// Supervisor menolak batch (notes opsional — bisa reject cepat lewat ikon,
-  /// atau reject detail dengan catatan lewat dialog)
-  Future<void> rejectBatch({
-    required String batchId,
-    required String supervisorId,
-    String? notes,
-  }) async {
-    final now = DateTime.now().toIso8601String();
-
-    await _client.from('approvals').upsert({
-      'batch_id': batchId,
-      'supervisor_id': supervisorId,
-      'approval_status': 'Rejected',
-      'comments': notes,
-      'approved_at': now,
-    }, onConflict: 'batch_id');
-
-    await _client
-        .from('production_batches')
-        .update({
-          'status': 'Rejected',
-          'updated_at': now,
-        })
-        .eq('id', batchId);
-  }
-
-  /// Supervisor menyelesaikan batch (Approved -> Completed).
-  /// final_volume & qc_result diambil otomatis dari data batch & QC yang sudah ada,
-  /// supervisor tidak perlu input ulang manual.
-  Future<void> completeBatch({
-    required String batchId,
-    required String supervisorId,
-    String? remarks,
-  }) async {
-    final now = DateTime.now().toIso8601String();
-
-    final batch = await _client
-        .from('production_batches')
-        .select('current_volume')
-        .eq('id', batchId)
-        .single();
+    final batch = await _getBatchWaitingApproval(batchId);
 
     final qc = await _client
         .from('quality_controls')
@@ -233,24 +171,83 @@ class ApprovalRepository {
         .eq('batch_id', batchId)
         .maybeSingle();
 
-    final finalVolume = (batch['current_volume'] as num?)?.toDouble() ?? 0.0;
-    final qcResult = qc?['result']?.toString() ?? '-';
+    final now = DateTime.now().toIso8601String();
 
-    await _client
-        .from('production_batches')
-        .update({
-          'status': 'Completed',
-          'updated_at': now,
-        })
-        .eq('id', batchId);
-
-    await _client.from('production_history').insert({
+    // 1. Catat keputusan Supervisor
+    await _client.from('approvals').upsert({
       'batch_id': batchId,
-      'completed_at': now,
-      'approved_by': supervisorId,
-      'final_volume': finalVolume,
-      'qc_result': qcResult,
-      'remarks': remarks,
-    });
+      'supervisor_id': supervisorId,
+      'approval_status': ApprovalWorkflow.approvedDecision,
+      'comments': comments,
+      'approved_at': now,
+    }, onConflict: 'batch_id');
+
+    // 2. Batch selesai
+    await _client.from('production_batches').update({
+      'status': ApprovalWorkflow.approve(),
+      'updated_at': now,
+    }).eq('id', batchId);
+
+    // 3. Masuk Production History (sekali saja per batch)
+    final existing = await _client
+        .from('production_history')
+        .select('id')
+        .eq('batch_id', batchId)
+        .maybeSingle();
+
+    if (existing == null) {
+      await _client.from('production_history').insert({
+        'batch_id': batchId,
+        'completed_at': now,
+        'approved_by': supervisorId,
+        'final_volume': batch['current_volume'],
+        'qc_result': qc?['result'],
+        'remarks': comments,
+      });
+    }
+  }
+
+  /// REJECT: catat keputusan dan ubah batch jadi Rejected.
+  Future<void> rejectBatch({
+    required String batchId,
+    required String supervisorId,
+    String comments = '',
+  }) async {
+    await _getBatchWaitingApproval(batchId);
+
+    final now = DateTime.now().toIso8601String();
+
+    await _client.from('approvals').upsert({
+      'batch_id': batchId,
+      'supervisor_id': supervisorId,
+      'approval_status': ApprovalWorkflow.rejectedDecision,
+      'comments': comments,
+      'approved_at': now,
+    }, onConflict: 'batch_id');
+
+    await _client.from('production_batches').update({
+      'status': ApprovalWorkflow.reject(),
+      'updated_at': now,
+    }).eq('id', batchId);
+  }
+
+  /// Memastikan batch memang masih menunggu approval
+  /// (mencegah batch yang sama diproses dua kali).
+  Future<Map<String, dynamic>> _getBatchWaitingApproval(String batchId) async {
+    final batch = await _client
+        .from('production_batches')
+        .select('status, current_volume')
+        .eq('id', batchId)
+        .maybeSingle();
+
+    if (batch == null) {
+      throw Exception('Batch tidak ditemukan.');
+    }
+    if (batch['status'] != ApprovalWorkflow.waitingStatus) {
+      throw Exception('Batch ini sudah diproses sebelumnya.');
+    }
+
+    debugPrint('Approval batch $batchId, status: ${batch['status']}');
+    return Map<String, dynamic>.from(batch);
   }
 }

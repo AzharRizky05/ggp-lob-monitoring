@@ -15,10 +15,23 @@ class HistoryStatusChip extends StatelessWidget {
     IconData icon;
 
     switch (status) {
-      case "Selesai":
+      case "Passed":
         backgroundColor = Colors.green.shade100;
         textColor = Colors.green.shade800;
         icon = Icons.check_circle;
+        break;
+
+      case "Failed":
+        backgroundColor = Colors.red.shade100;
+        textColor = Colors.red.shade800;
+        icon = Icons.cancel;
+        break;
+
+      case "Completed":
+      case "Selesai":
+        backgroundColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        icon = Icons.task_alt;
         break;
 
       case "Proses":

@@ -1,62 +1,75 @@
 import 'package:flutter/material.dart';
 
+import '../../approval/widgets/batch_timeline.dart';
+import '../models/history_model.dart';
+
 class HistoryDetailDialog extends StatelessWidget {
-  const HistoryDetailDialog({super.key});
+  final HistoryModel history;
+
+  const HistoryDetailDialog({super.key, required this.history});
+
+  Widget _tile(IconData icon, String title, String value) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(value),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Detail Riwayat Pemeliharaan"),
+      title: const Text("Detail Riwayat Produksi"),
       content: SizedBox(
-        width: 550,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.inventory_2_outlined),
-              title: Text("Kode Aset"),
-              subtitle: Text("AST-001"),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.precision_manufacturing_outlined),
-              title: Text("Nama Aset"),
-              subtitle: Text("Mesin Produksi A"),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.build_circle_outlined),
-              title: Text("Jenis Pemeliharaan"),
-              subtitle: Text("Preventive Maintenance"),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.person_outline),
-              title: Text("Teknisi"),
-              subtitle: Text("Budi Santoso"),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.calendar_today_outlined),
-              title: Text("Tanggal"),
-              subtitle: Text("18 Mei 2026"),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.assignment_turned_in_outlined),
-              title: Text("Hasil"),
-              subtitle: Text("Pemeliharaan berhasil diselesaikan."),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.note_alt_outlined),
-              title: Text("Catatan"),
-              subtitle: Text(
-                "Seluruh komponen telah diperiksa, dibersihkan, dan berfungsi dengan baik.",
+        width: 600,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const BatchTimeline(status: 'Completed'),
+              const SizedBox(height: 20),
+              _tile(Icons.qr_code, "Kode Batch", history.batchCode),
+              _tile(Icons.person_outline, "Operator", history.operatorName),
+              _tile(
+                Icons.calendar_today_outlined,
+                "Tanggal Produksi",
+                history.productionDateLabel,
               ),
-            ),
-          ],
+              _tile(
+                Icons.precision_manufacturing_outlined,
+                "Shift / Tank",
+                "${history.shift} • ${history.tank}",
+              ),
+              _tile(
+                Icons.flag_outlined,
+                "Target Volume",
+                history.targetVolumeLabel,
+              ),
+              _tile(
+                Icons.water_drop_outlined,
+                "Volume Akhir",
+                history.finalVolumeLabel,
+              ),
+              _tile(Icons.verified_outlined, "Hasil QC", history.qcResult),
+              _tile(
+                Icons.supervisor_account_outlined,
+                "Disetujui Oleh",
+                history.approvedByName,
+              ),
+              _tile(
+                Icons.event_available_outlined,
+                "Waktu Selesai",
+                history.completedAtLabel,
+              ),
+              _tile(
+                Icons.note_alt_outlined,
+                "Catatan Supervisor",
+                history.remarks.isEmpty ? "-" : history.remarks,
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

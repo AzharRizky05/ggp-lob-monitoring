@@ -1,105 +1,116 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../models/history_model.dart';
+import '../providers/history_provider.dart';
 import 'history_detail_dialog.dart';
 import 'history_status_chip.dart';
 
 class HistoryTable extends StatelessWidget {
-  final bool isOperator;
-
-  const HistoryTable({
-    super.key,
-    this.isOperator = false,
-  });
+  const HistoryTable({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final histories = [
-      HistoryModel(
-        id: "HIS001",
-        kodeBatch: "LOB-2026-001",
-        operator: "Budi Santoso",
-        tanggalProduksi: DateTime.now(),
-        tahapanTerakhir: "Pengemasan",
-        hasilQc: "Lulus",
-        status: "Selesai",
-        catatan: "Batch berhasil diproduksi sesuai standar.",
-      ),
-      HistoryModel(
-        id: "HIS002",
-        kodeBatch: "LOB-2026-002",
-        operator: "Andi Saputra",
-        tanggalProduksi: DateTime.now(),
-        tahapanTerakhir: "Quality Control",
-        hasilQc: "Tidak Lulus",
-        status: "Ditolak",
-        catatan: "Nilai pH di luar batas spesifikasi.",
-      ),
-      HistoryModel(
-        id: "HIS003",
-        kodeBatch: "LOB-2026-003",
-        operator: "Rudi Hartono",
-        tanggalProduksi: DateTime.now(),
-        tahapanTerakhir: "Fermentasi",
-        hasilQc: "-",
-        status: "Proses",
-        catatan: "Fermentasi masih berlangsung.",
-      ),
-    ];
+    return Consumer<HistoryProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
+          return const _StateCard(child: CircularProgressIndicator());
+        }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowHeight: 56,
-          dataRowMinHeight: 72,
-          dataRowMaxHeight: 72,
-          columns: const [
-            DataColumn(label: Text("Kode Batch")),
-            DataColumn(label: Text("Operator")),
-            DataColumn(label: Text("Tahapan Terakhir")),
-            DataColumn(label: Text("Hasil QC")),
-            DataColumn(label: Text("Status")),
-            DataColumn(label: Text("Tanggal Produksi")),
-            DataColumn(label: Text("Aksi")),
-          ],
-          rows: histories.map((item) {
-            return DataRow(
-              cells: [
-                DataCell(Text(item.kodeBatch)),
-                DataCell(Text(item.operator)),
-                DataCell(Text(item.tahapanTerakhir)),
-                DataCell(Text(item.hasilQc)),
-                DataCell(
-                  HistoryStatusChip(
-                    status: item.status,
-                  ),
-                ),
-                DataCell(
-                  Text(
-                    "${item.tanggalProduksi.day}/${item.tanggalProduksi.month}/${item.tanggalProduksi.year}",
-                  ),
-                ),
-                DataCell(
-                  IconButton(
-                    tooltip: "Lihat Detail",
-                    icon: const Icon(Icons.visibility_outlined),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => const HistoryDetailDialog(),
-                      );
-                    },
-                  ),
+        if (provider.errorMessage != null) {
+          return _StateCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Gagal memuat riwayat produksi."),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: provider.loadData,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("Coba Lagi"),
                 ),
               ],
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }
+
+        final histories = provider.histories;
+
+        if (histories.isEmpty) {
+          return const _StateCard(
+            child: Text("Belum ada riwayat produksi yang selesai."),
+          );
+        }
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowHeight: 56,
+              dataRowMinHeight: 64,
+              dataRowMaxHeight: 72,
+              columns: const [
+                DataColumn(label: Text("Kode Batch")),
+                DataColumn(label: Text("Operator")),
+                DataColumn(label: Text("Tgl Produksi")),
+                DataColumn(label: Text("Volume Akhir")),
+                DataColumn(label: Text("Hasil QC")),
+                DataColumn(label: Text("Disetujui Oleh")),
+                DataColumn(label: Text("Tgl Selesai")),
+                DataColumn(label: Text("Aksi")),
+              ],
+              rows: histories.map((item) {
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Text(
+                        item.batchCode,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    DataCell(Text(item.operatorName)),
+                    DataCell(Text(item.productionDateLabel)),
+                    DataCell(Text(item.finalVolumeLabel)),
+                    DataCell(HistoryStatusChip(status: item.qcResult)),
+                    DataCell(Text(item.approvedByName)),
+                    DataCell(Text(item.completedAtLabel)),
+                    DataCell(
+                      IconButton(
+                        tooltip: "Lihat Detail",
+                        icon: const Icon(Icons.visibility_outlined),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => HistoryDetailDialog(history: item),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StateCard extends StatelessWidget {
+  final Widget child;
+
+  const _StateCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Center(child: child),
       ),
     );
   }

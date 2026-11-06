@@ -47,7 +47,7 @@ class ProfileInformationCard extends StatelessWidget {
       _InfoRow(
         icon: Icons.verified_user_outlined,
         iconColor: AppColors.success,
-        iconBackground: AppColors.success.withOpacity(0.12),
+        iconBackground: AppColors.success.withValues(alpha: 0.12),
         label: 'Status Akun',
         value: ProfileDummyData.status,
         valueColor: AppColors.success,

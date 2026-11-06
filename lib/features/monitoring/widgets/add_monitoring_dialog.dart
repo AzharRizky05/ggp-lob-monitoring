@@ -173,7 +173,7 @@ class _AddMonitoringDialogState extends State<AddMonitoringDialog> {
                       .map(
                         (batch) => DropdownMenuItem(
                           value: batch,
-                          child: Text(batch.batchCode),
+                          child: Text("${batch.batchCode} • ${batch.status}"),
                         ),
                       )
                       .toList(),

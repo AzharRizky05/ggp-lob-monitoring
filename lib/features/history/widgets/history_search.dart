@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class HistorySearch extends StatefulWidget {
+import '../providers/history_provider.dart';
+
+class HistorySearch extends StatelessWidget {
   const HistorySearch({super.key});
 
   @override
-  State<HistorySearch> createState() => _HistorySearchState();
-}
-
-class _HistorySearchState extends State<HistorySearch> {
-  String status = "Semua";
-
-  @override
   Widget build(BuildContext context) {
+    final period = context.select<HistoryProvider, String>((p) => p.period);
+
     return Row(
       children: [
         Expanded(
           flex: 3,
           child: TextField(
+            onChanged: context.read<HistoryProvider>().setSearchQuery,
             decoration: InputDecoration(
-              hintText: "Cari kode batch atau operator...",
+              hintText: "Cari kode batch, operator, atau supervisor...",
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -27,42 +26,30 @@ class _HistorySearchState extends State<HistorySearch> {
             ),
           ),
         ),
-
         const SizedBox(width: 16),
-
         SizedBox(
           width: 240,
           child: DropdownButtonFormField<String>(
-            initialValue: status,
+            initialValue: period,
             decoration: InputDecoration(
-              labelText: "Status Produksi",
+              labelText: "Periode Selesai",
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
               isDense: true,
             ),
-            items: const [
-              DropdownMenuItem(
-                value: "Semua",
-                child: Text("Semua"),
-              ),
-              DropdownMenuItem(
-                value: "Proses",
-                child: Text("Proses"),
-              ),
-              DropdownMenuItem(
-                value: "Selesai",
-                child: Text("Selesai"),
-              ),
-              DropdownMenuItem(
-                value: "Ditolak",
-                child: Text("Ditolak"),
-              ),
-            ],
+            items: HistoryProvider.periods
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item,
+                    child: Text(item),
+                  ),
+                )
+                .toList(),
             onChanged: (value) {
-              setState(() {
-                status = value ?? "Semua";
-              });
+              if (value != null) {
+                context.read<HistoryProvider>().setPeriod(value);
+              }
             },
           ),
         ),

@@ -18,7 +18,7 @@ class SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
+        color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       child: child,

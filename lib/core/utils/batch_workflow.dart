@@ -53,7 +53,8 @@ class BatchWorkflow {
   /// ==========================================================
   static bool isQcStage(String status) {
     return status == 'QC Pending' ||
-        status == 'QC Passed';
+        status == 'QC Passed' ||
+        status == 'QC Failed';
   }
 
   /// ==========================================================

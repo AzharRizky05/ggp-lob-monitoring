@@ -5,11 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../models/dashboard_data.dart';
 
 class BatchStatusChart extends StatelessWidget {
-  const BatchStatusChart({
-    super.key,
-    this.summary,
-    this.loading = false,
-  });
+  const BatchStatusChart({super.key, this.summary, this.loading = false});
 
   final DashboardSummary? summary;
   final bool loading;
@@ -18,9 +14,7 @@ class BatchStatusChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -40,9 +34,7 @@ class BatchStatusChart extends StatelessWidget {
             SizedBox(
               height: 260,
               child: loading || summary == null
-                  ? const Center(
-                      child: Text('Memuat data status batch...'),
-                    )
+                  ? const Center(child: Text('Memuat data status batch...'))
                   : PieChart(
                       PieChartData(
                         centerSpaceRadius: 55,
@@ -60,9 +52,9 @@ class BatchStatusChart extends StatelessWidget {
                             ),
                           ),
                           PieChartSectionData(
-                            value: 0,
+                            value: summary!.waitingQc.toDouble(),
                             color: Colors.orange,
-                            title: "QC\n0",
+                            title: "QC\n${summary!.waitingQc}",
                             radius: 75,
                             titleStyle: const TextStyle(
                               color: Colors.white,
@@ -82,9 +74,9 @@ class BatchStatusChart extends StatelessWidget {
                             ),
                           ),
                           PieChartSectionData(
-                            value: 0,
+                            value: summary!.rejectedBatches.toDouble(),
                             color: Colors.red,
-                            title: "Reject\n0",
+                            title: "Reject\n${summary!.rejectedBatches}",
                             radius: 75,
                             titleStyle: const TextStyle(
                               color: Colors.white,
@@ -103,22 +95,10 @@ class BatchStatusChart extends StatelessWidget {
               spacing: 20,
               runSpacing: 12,
               children: const [
-                _LegendItem(
-                  color: Colors.green,
-                  title: "Batch Aktif",
-                ),
-                _LegendItem(
-                  color: Colors.orange,
-                  title: "Menunggu QC",
-                ),
-                _LegendItem(
-                  color: Colors.blue,
-                  title: "Selesai",
-                ),
-                _LegendItem(
-                  color: Colors.red,
-                  title: "Reject",
-                ),
+                _LegendItem(color: Colors.green, title: "Batch Aktif"),
+                _LegendItem(color: Colors.orange, title: "Menunggu QC"),
+                _LegendItem(color: Colors.blue, title: "Selesai"),
+                _LegendItem(color: Colors.red, title: "Reject"),
               ],
             ),
           ],
@@ -132,10 +112,7 @@ class _LegendItem extends StatelessWidget {
   final Color color;
   final String title;
 
-  const _LegendItem({
-    required this.color,
-    required this.title,
-  });
+  const _LegendItem({required this.color, required this.title});
 
   @override
   Widget build(BuildContext context) {

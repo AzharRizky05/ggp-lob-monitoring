@@ -1,11 +1,14 @@
 class ApprovalWorkflow {
   ApprovalWorkflow._();
 
-  static String approve() {
-    return "Completed";
-  }
+  /// Status batch yang menunggu keputusan Supervisor.
+  static const String waitingStatus = 'Waiting Approval';
 
-  static String reject() {
-    return "Rejected";
-  }
+  /// Nilai kolom approvals.approval_status
+  static const String approvedDecision = 'Approved';
+  static const String rejectedDecision = 'Rejected';
+
+  /// Status batch setelah keputusan. Approve = produksi selesai.
+  static String approve() => 'Completed';
+  static String reject() => 'Rejected';
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../features/approval/models/approval_model.dart';
 import '../features/approval/models/approval_history_model.dart';
-import '../features/approval/models/production_history_model.dart';
+import '../features/approval/models/approval_model.dart';
 import '../repositories/approval_repository.dart';
 
 class ApprovalProvider extends ChangeNotifier {
@@ -13,172 +12,117 @@ class ApprovalProvider extends ChangeNotifier {
   final ApprovalRepository _repository = ApprovalRepository();
 
   bool _loading = false;
-  bool _historyLoading = false;
-  bool _processing = false;
   String? _errorMessage;
-
-  String _historyStatusFilter = 'Semua';
-
   List<ApprovalModel> _approvals = [];
-  List<ApprovalHistoryModel> _histories = [];
-  List<ProductionHistoryModel> _productionHistory = [];
 
   bool get loading => _loading;
+  String? get errorMessage => _errorMessage;
+  List<ApprovalModel> get approvals => List.unmodifiable(_approvals);
+
+  bool _historyLoading = false;
+  String? _historyErrorMessage;
+  List<ApprovalHistoryModel> _histories = [];
+  String _historyStatusFilter = 'Semua';
 
   bool get historyLoading => _historyLoading;
-
-  bool get processing => _processing;
-
-  String? get errorMessage => _errorMessage;
-
+  String? get historyErrorMessage => _historyErrorMessage;
+  List<ApprovalHistoryModel> get histories => List.unmodifiable(_histories);
   String get historyStatusFilter => _historyStatusFilter;
 
-  List<ApprovalModel> get approvals => _approvals;
-
-  List<ApprovalHistoryModel> get histories => _histories;
-
-  List<ProductionHistoryModel> get productionHistory => _productionHistory;
-
-  /// Batch QC Passed (butuh Approve/Reject) + Approved (butuh Complete)
   Future<void> loadApprovals() async {
-    _loading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+    _setLoading(true);
     try {
-      _approvals = await _repository.getPendingApprovals();
+      _errorMessage = null;
+      _approvals = await _repository.getApprovalList();
     } catch (e) {
-      _errorMessage = e.toString();
       _approvals = [];
+      _errorMessage = e.toString();
+      debugPrint("ApprovalProvider.loadApprovals: $e");
+    } finally {
+      _setLoading(false);
     }
-
-    _loading = false;
-    notifyListeners();
   }
 
-  Future<void> loadApprovalHistory({String status = 'Semua'}) async {
+  Future<void> loadApprovalHistory({String? status}) async {
     _historyLoading = true;
-    _errorMessage = null;
-    _historyStatusFilter = status;
+    if (status != null) _historyStatusFilter = status;
     notifyListeners();
 
     try {
-      _histories = await _repository.getApprovalHistory(status: status);
+      _historyErrorMessage = null;
+      _histories = await _repository.getApprovalHistoryList(
+        statusFilter: _historyStatusFilter,
+      );
     } catch (e) {
-      _errorMessage = e.toString();
       _histories = [];
+      _historyErrorMessage = e.toString();
+      debugPrint("ApprovalProvider.loadApprovalHistory: $e");
+    } finally {
+      _historyLoading = false;
+      notifyListeners();
     }
-
-    _historyLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> loadProductionHistory() async {
-    _loading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      _productionHistory = await _repository.getProductionHistory();
-    } catch (e) {
-      _errorMessage = e.toString();
-      _productionHistory = [];
-    }
-
-    _loading = false;
-    notifyListeners();
   }
 
   Future<bool> approveBatch({
     required String batchId,
     required String supervisorId,
-    String? notes,
-  }) async {
-    try {
-      _processing = true;
-      _errorMessage = null;
-      notifyListeners();
-
+    String comments = '',
+  }) {
+    return _executeAction(() async {
       await _repository.approveBatch(
         batchId: batchId,
         supervisorId: supervisorId,
-        notes: notes,
+        comments: comments,
       );
-
-      _approvals = await _repository.getPendingApprovals();
-
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _processing = false;
-      notifyListeners();
-    }
+    });
   }
 
   Future<bool> rejectBatch({
     required String batchId,
     required String supervisorId,
-    String? notes,
-  }) async {
-    try {
-      _processing = true;
-      _errorMessage = null;
-      notifyListeners();
-
+    String comments = '',
+  }) {
+    return _executeAction(() async {
       await _repository.rejectBatch(
         batchId: batchId,
         supervisorId: supervisorId,
-        notes: notes,
+        comments: comments,
       );
-
-      _approvals = await _repository.getPendingApprovals();
-
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _processing = false;
-      notifyListeners();
-    }
+    });
   }
 
-  Future<bool> completeBatch({
-    required String batchId,
-    required String supervisorId,
-    String? remarks,
-  }) async {
-    try {
-      _processing = true;
-      _errorMessage = null;
-      notifyListeners();
-
-      await _repository.completeBatch(
-        batchId: batchId,
-        supervisorId: supervisorId,
-        remarks: remarks,
-      );
-
-      _approvals = await _repository.getPendingApprovals();
-
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _processing = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> refresh() async {
-    await loadApprovals();
-  }
+  Future<void> refresh() async => loadApprovals();
 
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<bool> _executeAction(Future<void> Function() action) async {
+    _setLoading(true);
+    try {
+      _errorMessage = null;
+      await action();
+
+      _approvals = await _repository.getApprovalList();
+      if (_histories.isNotEmpty || _historyStatusFilter != 'Semua') {
+        _histories = await _repository.getApprovalHistoryList(
+          statusFilter: _historyStatusFilter,
+        );
+      }
+
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint("ApprovalProvider: $e");
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  void _setLoading(bool value) {
+    _loading = value;
     notifyListeners();
   }
 }

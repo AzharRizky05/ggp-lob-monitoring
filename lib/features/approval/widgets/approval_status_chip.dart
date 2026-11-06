@@ -15,6 +15,12 @@ class ApprovalStatusChip extends StatelessWidget {
     IconData icon;
 
     switch (status) {
+      case "Waiting Approval":
+        backgroundColor = Colors.purple.shade100;
+        textColor = Colors.purple.shade800;
+        icon = Icons.hourglass_bottom;
+        break;
+
       case "QC Passed":
         backgroundColor = Colors.blue.shade100;
         textColor = Colors.blue.shade800;

@@ -74,7 +74,7 @@ class OperatorDashboardContent extends StatelessWidget {
             totalBatches: data?.summary.totalBatches ?? 0,
             activeBatches: data?.summary.activeBatches ?? 0,
             completedBatches: data?.summary.completedBatches ?? 0,
-            pendingApprovals: data?.summary.pendingApprovals ?? 0,
+            pendingApprovals: data?.summary.waitingQc ?? 0,
             loading: loading,
           ),
 
@@ -126,9 +126,9 @@ class OperatorDashboardContent extends StatelessWidget {
                   _guideCard(
                     color: Colors.orange,
                     icon: Icons.sync_alt_rounded,
-                    title: "3. Update Status",
+                    title: "3. Status Otomatis",
                     subtitle:
-                        "Perbarui status produksi mulai dari Preparation, Mixing, Fermentation, Filtering hingga Packaging.",
+                        "Setiap monitoring yang disimpan otomatis memajukan status batch: Preparation, Mixing, Fermentation, Filtering, hingga Packaging.",
                   ),
 
                   _guideCard(

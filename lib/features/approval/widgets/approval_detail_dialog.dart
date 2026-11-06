@@ -19,7 +19,7 @@ class ApprovalDetailDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              BatchTimeline(status: history.status),
+              BatchTimeline(status: history.approvalStatus),
               const SizedBox(height: 20),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -50,25 +50,25 @@ class ApprovalDetailDialog extends StatelessWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.flag_outlined),
-                title: const Text("Status"),
-                subtitle: Text(history.status),
+                title: const Text("Status Approval"),
+                subtitle: Text(history.approvalStatus),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event_available_outlined),
                 title: const Text("Waktu Approval"),
                 subtitle: Text(
-                  "${history.approvedAt.day}/${history.approvedAt.month}/${history.approvedAt.year} "
-                  "${history.approvedAt.hour.toString().padLeft(2, '0')}:${history.approvedAt.minute.toString().padLeft(2, '0')}",
+                  history.approvedAt == null
+                      ? "-"
+                      : "${history.approvedAt!.day}/${history.approvedAt!.month}/${history.approvedAt!.year} "
+                          "${history.approvedAt!.hour.toString().padLeft(2, '0')}:${history.approvedAt!.minute.toString().padLeft(2, '0')}",
                 ),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.note_alt_outlined),
                 title: const Text("Catatan Supervisor"),
-                subtitle: Text(
-                  history.notes.isEmpty ? "-" : history.notes,
-                ),
+                subtitle: Text(history.comments.isEmpty ? "-" : history.comments),
               ),
             ],
           ),

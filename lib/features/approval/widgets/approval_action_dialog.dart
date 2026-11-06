@@ -44,7 +44,7 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
     final success = await provider.approveBatch(
       batchId: widget.approval.batchId,
       supervisorId: supervisorId,
-      notes: _noteController.text.trim(),
+      comments: _noteController.text.trim(),
     );
 
     if (!mounted) return;
@@ -57,9 +57,7 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? "Gagal melakukan approval."),
-        ),
+        SnackBar(content: Text(provider.errorMessage ?? "Gagal melakukan approval.")),
       );
     }
   }
@@ -79,7 +77,7 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
     final success = await provider.rejectBatch(
       batchId: widget.approval.batchId,
       supervisorId: supervisorId,
-      notes: _noteController.text.trim(),
+      comments: _noteController.text.trim(),
     );
 
     if (!mounted) return;
@@ -92,9 +90,7 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage ?? "Gagal melakukan reject."),
-        ),
+        SnackBar(content: Text(provider.errorMessage ?? "Gagal melakukan reject.")),
       );
     }
   }
@@ -102,6 +98,7 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
   @override
   Widget build(BuildContext context) {
     final item = widget.approval;
+    final canDecide = item.status == 'Waiting Approval';
 
     return AlertDialog(
       title: const Text("Approval Batch Produksi"),
@@ -152,15 +149,17 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
                 title: const Text("Catatan QC"),
                 subtitle: Text(item.qcNotes.isEmpty ? "-" : item.qcNotes),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _noteController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: "Catatan Supervisor",
-                  border: OutlineInputBorder(),
+              if (canDecide) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _noteController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: "Catatan Supervisor",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -168,9 +167,9 @@ class _ApprovalActionDialogState extends State<ApprovalActionDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.pop(context),
-          child: const Text("Batal"),
+          child: const Text("Tutup"),
         ),
-        if (item.status == 'QC Passed') ...[
+        if (canDecide) ...[
           FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: _loading ? null : _reject,

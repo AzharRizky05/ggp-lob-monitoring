@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import '../core/services/supabase_service.dart';
 import '../features/quality_control/models/qc_model.dart';
 
+import '../core/workflows/qc_workflow.dart';
+
 class QcRepository {
   QcRepository();
 
@@ -92,20 +94,14 @@ class QcRepository {
 
     switch (qc.result.toUpperCase()) {
       case "PASSED":
-        nextStatus = "QC Passed";
+        nextStatus = QcWorkflow.pass();   // "Waiting Approval"
         break;
-
       case "FAILED":
-        nextStatus = "QC Failed";
+        nextStatus = QcWorkflow.fail();   // "QC Failed"
         break;
-
       default:
         nextStatus = "QC Pending";
     }
-
-    debugPrint("========== UPDATE BATCH ==========");
-    debugPrint("Batch : ${qc.batchId}");
-    debugPrint("Status : $nextStatus");
 
     final result = await _client
         .from('production_batches')
@@ -117,7 +113,6 @@ class QcRepository {
         .select();
 
     debugPrint(result.toString());
-    debugPrint("STATUS BATCH BERHASIL");
   }
 
   Future<void> deleteQc(String id) async {

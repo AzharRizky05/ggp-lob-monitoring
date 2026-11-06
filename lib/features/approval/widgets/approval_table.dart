@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../providers/approval_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../models/approval_model.dart';
 import 'approval_action_dialog.dart';
 import 'approval_status_chip.dart';
 
@@ -20,6 +21,84 @@ class _ApprovalTableState extends State<ApprovalTable> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ApprovalProvider>().loadApprovals();
     });
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    Color? confirmColor,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Batal"),
+          ),
+          FilledButton(
+            style: confirmColor == null
+                ? null
+                : FilledButton.styleFrom(backgroundColor: confirmColor),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _decide(
+    ApprovalProvider provider,
+    ApprovalModel item, {
+    required bool approve,
+  }) async {
+    final supervisorId = context.read<AuthProvider>().userProfile?.id;
+    if (supervisorId == null) {
+      _showMessage("Sesi supervisor tidak ditemukan.");
+      return;
+    }
+
+    final confirmed = await _confirm(
+      title: approve ? "Approve Batch?" : "Reject Batch?",
+      message: approve
+          ? "Batch ${item.batchCode} akan dinyatakan selesai dan masuk Production History."
+          : "Batch ${item.batchCode} akan ditolak.",
+      confirmLabel: approve ? "Approve" : "Reject",
+      confirmColor: approve ? Colors.green : Colors.red,
+    );
+
+    if (!confirmed || !mounted) return;
+
+    final success = approve
+        ? await provider.approveBatch(
+            batchId: item.batchId,
+            supervisorId: supervisorId,
+          )
+        : await provider.rejectBatch(
+            batchId: item.batchId,
+            supervisorId: supervisorId,
+          );
+
+    if (!mounted) return;
+
+    _showMessage(
+      success
+          ? (approve
+              ? "Batch berhasil disetujui dan diselesaikan."
+              : "Batch berhasil ditolak.")
+          : provider.errorMessage ?? "Gagal memproses batch.",
+    );
   }
 
   @override
@@ -48,7 +127,9 @@ class _ApprovalTableState extends State<ApprovalTable> {
 
         return Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
@@ -65,8 +146,6 @@ class _ApprovalTableState extends State<ApprovalTable> {
                 DataColumn(label: Text("Aksi")),
               ],
               rows: provider.approvals.map((item) {
-                final isReadyToComplete = item.status == 'Approved';
-
                 return DataRow(
                   cells: [
                     DataCell(Text(item.batchCode)),
@@ -89,89 +168,25 @@ class _ApprovalTableState extends State<ApprovalTable> {
                             onPressed: () {
                               showDialog(
                                 context: context,
-                                builder: (_) => ApprovalActionDialog(approval: item),
+                                builder: (_) =>
+                                    ApprovalActionDialog(approval: item),
                               );
                             },
                           ),
-                          if (!isReadyToComplete) ...[
-                            IconButton(
-                              tooltip: "Approve",
-                              color: Colors.green,
-                              icon: const Icon(Icons.check_circle),
-                              onPressed: () async {
-                                final supervisorId =
-                                    context.read<AuthProvider>().userProfile?.id;
-                                if (supervisorId == null) return;
-
-                                final success = await provider.approveBatch(
-                                  batchId: item.batchId,
-                                  supervisorId: supervisorId,
-                                );
-
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      success
-                                          ? "Batch berhasil diapprove."
-                                          : provider.errorMessage ?? "Gagal approve batch.",
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              tooltip: "Reject",
-                              color: Colors.red,
-                              icon: const Icon(Icons.cancel),
-                              onPressed: () async {
-                                final supervisorId =
-                                    context.read<AuthProvider>().userProfile?.id;
-                                if (supervisorId == null) return;
-
-                                final success = await provider.rejectBatch(
-                                  batchId: item.batchId,
-                                  supervisorId: supervisorId,
-                                );
-
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      success
-                                          ? "Batch berhasil direject."
-                                          : provider.errorMessage ?? "Gagal reject batch.",
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ] else
-                            TextButton.icon(
-                              icon: const Icon(Icons.task_alt, size: 18),
-                              label: const Text("Complete"),
-                              onPressed: () async {
-                                final supervisorId =
-                                    context.read<AuthProvider>().userProfile?.id;
-                                if (supervisorId == null) return;
-
-                                final success = await provider.completeBatch(
-                                  batchId: item.batchId,
-                                  supervisorId: supervisorId,
-                                );
-
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      success
-                                          ? "Batch berhasil diselesaikan."
-                                          : provider.errorMessage ?? "Gagal menyelesaikan batch.",
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                          IconButton(
+                            tooltip: "Approve",
+                            color: Colors.green,
+                            icon: const Icon(Icons.check_circle),
+                            onPressed: () =>
+                                _decide(provider, item, approve: true),
+                          ),
+                          IconButton(
+                            tooltip: "Reject",
+                            color: Colors.red,
+                            icon: const Icon(Icons.cancel),
+                            onPressed: () =>
+                                _decide(provider, item, approve: false),
+                          ),
                         ],
                       ),
                     ),

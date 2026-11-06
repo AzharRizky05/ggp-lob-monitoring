@@ -4,12 +4,20 @@ class DashboardSummary {
     required this.activeBatches,
     required this.completedBatches,
     required this.pendingApprovals,
+    this.waitingQc = 0,
+    this.qcPassed = 0,
+    this.qcFailed = 0,
+    this.rejectedBatches = 0,
   });
 
   final int totalBatches;
   final int activeBatches;
   final int completedBatches;
   final int pendingApprovals;
+  final int waitingQc;
+  final int qcPassed;
+  final int qcFailed;
+  final int rejectedBatches;
 
   factory DashboardSummary.fromMap(Map<String, dynamic> map) {
     return DashboardSummary(
@@ -17,6 +25,10 @@ class DashboardSummary {
       activeBatches: _toInt(map['active_batches']),
       completedBatches: _toInt(map['completed_batches']),
       pendingApprovals: _toInt(map['pending_approvals']),
+      waitingQc: _toInt(map['waiting_qc']),
+      qcPassed: _toInt(map['qc_passed']),
+      qcFailed: _toInt(map['qc_failed']),
+      rejectedBatches: _toInt(map['rejected_batches']),
     );
   }
 
