@@ -8,36 +8,25 @@ class HistoryProvider extends ChangeNotifier {
     loadData();
   }
 
-  static const String periodAll = 'Semua';
-  static const String periodLast7Days = '7 Hari Terakhir';
-  static const String periodLast30Days = '30 Hari Terakhir';
-  static const String periodThisMonth = 'Bulan Ini';
-
-  static const List<String> periods = [
-    periodAll,
-    periodLast7Days,
-    periodLast30Days,
-    periodThisMonth,
-  ];
-
   final HistoryRepository _repository = HistoryRepository();
 
   bool _loading = false;
   String? _errorMessage;
   List<HistoryModel> _histories = [];
   String _searchQuery = '';
-  String _period = periodAll;
+
+  /// Rentang tanggal selesai. null berarti semua tanggal.
+  DateTimeRange? _range;
 
   bool get isLoading => _loading;
   String? get errorMessage => _errorMessage;
-  String get period => _period;
+  DateTimeRange? get range => _range;
 
   List<HistoryModel> get histories {
     final query = _searchQuery.trim().toLowerCase();
-    final now = DateTime.now();
 
     return _histories.where((item) {
-      if (!_matchesPeriod(item.completedAt, now)) return false;
+      if (!_matchesRange(item.completedAt)) return false;
       if (query.isEmpty) return true;
 
       return item.batchCode.toLowerCase().contains(query) ||
@@ -46,20 +35,20 @@ class HistoryProvider extends ChangeNotifier {
     }).toList();
   }
 
-  bool _matchesPeriod(DateTime? date, DateTime now) {
-    if (_period == periodAll) return true;
+  bool _matchesRange(DateTime? date) {
+    final range = _range;
+    if (range == null) return true;
     if (date == null) return false;
 
-    switch (_period) {
-      case periodLast7Days:
-        return date.isAfter(now.subtract(const Duration(days: 7)));
-      case periodLast30Days:
-        return date.isAfter(now.subtract(const Duration(days: 30)));
-      case periodThisMonth:
-        return date.year == now.year && date.month == now.month;
-      default:
-        return true;
-    }
+    // Dibandingkan per hari penuh, jadi tanggal akhir ikut dihitung sampai 23:59.
+    final start = DateTime(range.start.year, range.start.month, range.start.day);
+    final endExclusive = DateTime(
+      range.end.year,
+      range.end.month,
+      range.end.day,
+    ).add(const Duration(days: 1));
+
+    return !date.isBefore(start) && date.isBefore(endExclusive);
   }
 
   Future<void> loadData() async {
@@ -84,8 +73,10 @@ class HistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPeriod(String value) {
-    _period = value;
+  void setRange(DateTimeRange? value) {
+    _range = value;
     notifyListeners();
   }
+
+  void clearRange() => setRange(null);
 }

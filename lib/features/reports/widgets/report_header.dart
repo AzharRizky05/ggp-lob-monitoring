@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import 'export_button.dart';
 
 class ReportHeader extends StatelessWidget {
   const ReportHeader({super.key});
@@ -23,7 +24,7 @@ class ReportHeader extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Lihat rekap produksi Liquid Organic Biofertilizer berdasarkan batch, operator, status produksi, dan hasil Quality Control.",
+                "Rekap produksi Liquid Organic Biofertilizer berdasarkan periode, status batch, dan hasil Quality Control.",
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 15,
@@ -32,11 +33,8 @@ class ReportHeader extends StatelessWidget {
             ],
           ),
         ),
-        FilledButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.download_outlined),
-          label: const Text("Export Laporan"),
-        ),
+        const SizedBox(width: 16),
+        const ExportButton(),
       ],
     );
   }

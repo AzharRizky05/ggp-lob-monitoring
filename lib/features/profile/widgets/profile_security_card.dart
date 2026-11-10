@@ -1,75 +1,106 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/buttons/primary_button.dart';
 import '../../../shared/widgets/cards/section_card.dart';
 import '../../../shared/widgets/textfields/custom_text_field.dart';
+import '../providers/profile_provider.dart';
 
 /// Card kanan: Keamanan Akun (form ubah password).
 class ProfileSecurityCard extends StatefulWidget {
-  final Future<void> Function(
-    String currentPassword,
-    String newPassword,
-    String confirmPassword,
-  ) onChangePassword;
-
-  const ProfileSecurityCard({super.key, required this.onChangePassword});
+  const ProfileSecurityCard({super.key});
 
   @override
   State<ProfileSecurityCard> createState() => _ProfileSecurityCardState();
 }
 
 class _ProfileSecurityCardState extends State<ProfileSecurityCard> {
+  static const int _minPasswordLength = 6;
+
   final _formKey = GlobalKey<FormState>();
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
 
   bool _obscureCurrent = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
-  bool _isSubmitting = false;
-  String? _confirmError;
+  String? _error;
 
   @override
   void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSubmit() async {
-    final isFormValid = _formKey.currentState!.validate();
-    final passwordsMatch =
-        _newPasswordController.text == _confirmPasswordController.text;
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _confirmError =
-          passwordsMatch ? null : 'Konfirmasi password tidak cocok';
-    });
+    final current = _currentController.text;
+    final newPassword = _newController.text;
+    final confirm = _confirmController.text;
 
-    if (!isFormValid || !passwordsMatch) return;
-
-    setState(() => _isSubmitting = true);
-    try {
-      await widget.onChangePassword(
-        _currentPasswordController.text,
-        _newPasswordController.text,
-        _confirmPasswordController.text,
-      );
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+    String? error;
+    if (newPassword.length < _minPasswordLength) {
+      error = 'Password baru minimal $_minPasswordLength karakter.';
+    } else if (newPassword != confirm) {
+      error = 'Konfirmasi password tidak cocok.';
+    } else if (newPassword == current) {
+      error = 'Password baru harus berbeda dari password saat ini.';
     }
+
+    if (error != null) {
+      setState(() => _error = error);
+      return;
+    }
+
+    setState(() => _error = null);
+
+    final email = context.read<AuthProvider>().userProfile?.email ?? '';
+    final provider = context.read<ProfileProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final success = await provider.changePassword(
+      email: email,
+      currentPassword: current,
+      newPassword: newPassword,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      _currentController.clear();
+      _newController.clear();
+      _confirmController.clear();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Password berhasil diubah.')),
+      );
+    } else {
+      setState(() => _error = provider.errorMessage ?? 'Gagal mengubah password.');
+    }
+  }
+
+  Widget _toggle(bool obscure, VoidCallback onPressed) {
+    return IconButton(
+      icon: Icon(
+        obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        color: AppColors.textSecondary,
+      ),
+      onPressed: onPressed,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final loading =
+        context.select<ProfileProvider, bool>((p) => p.changingPassword);
+
     return SectionCard(
       padding: const EdgeInsets.all(AppSpacing.xxl),
       child: Form(
@@ -87,77 +118,56 @@ class _ProfileSecurityCardState extends State<ProfileSecurityCard> {
               style: AppTextStyles.caption,
             ),
             const SizedBox(height: AppSpacing.xl),
-
             Text('Password Saat Ini', style: AppTextStyles.caption),
             const SizedBox(height: AppSpacing.xs),
             CustomTextField(
-              controller: _currentPasswordController,
+              controller: _currentController,
               hintText: 'Masukkan password saat ini',
               prefixIcon: Icons.lock_outline,
               obscureText: _obscureCurrent,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureCurrent
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () =>
-                    setState(() => _obscureCurrent = !_obscureCurrent),
+              suffixIcon: _toggle(
+                _obscureCurrent,
+                () => setState(() => _obscureCurrent = !_obscureCurrent),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-
             Text('Password Baru', style: AppTextStyles.caption),
             const SizedBox(height: AppSpacing.xs),
             CustomTextField(
-              controller: _newPasswordController,
+              controller: _newController,
               hintText: 'Masukkan password baru',
               prefixIcon: Icons.lock_outline,
               obscureText: _obscureNew,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureNew
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () => setState(() => _obscureNew = !_obscureNew),
+              suffixIcon: _toggle(
+                _obscureNew,
+                () => setState(() => _obscureNew = !_obscureNew),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-
             Text('Konfirmasi Password Baru', style: AppTextStyles.caption),
             const SizedBox(height: AppSpacing.xs),
             CustomTextField(
-              controller: _confirmPasswordController,
+              controller: _confirmController,
               hintText: 'Konfirmasi password baru',
               prefixIcon: Icons.lock_outline,
               obscureText: _obscureConfirm,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirm
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () =>
-                    setState(() => _obscureConfirm = !_obscureConfirm),
+              suffixIcon: _toggle(
+                _obscureConfirm,
+                () => setState(() => _obscureConfirm = !_obscureConfirm),
               ),
             ),
-            if (_confirmError != null) ...[
-              const SizedBox(height: AppSpacing.xs),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.md),
               Text(
-                _confirmError!,
+                _error!,
                 style: AppTextStyles.caption.copyWith(color: AppColors.danger),
               ),
             ],
-
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(
               text: 'Ubah Password',
-              onPressed: _handleSubmit,
-              loading: _isSubmitting,
+              onPressed: _submit,
+              loading: loading,
             ),
           ],
         ),

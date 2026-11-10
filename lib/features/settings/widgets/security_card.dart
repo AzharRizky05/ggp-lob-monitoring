@@ -1,9 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/router/route_name.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../providers/auth_provider.dart';
 
 class SecurityCard extends StatelessWidget {
   const SecurityCard({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final router = GoRouter.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Keluar dari aplikasi?"),
+        content: const Text("Anda perlu login kembali untuk mengakses sistem."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Batal"),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Keluar"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await auth.logout();
+    router.go(RouteName.login);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,111 +58,34 @@ class SecurityCard extends StatelessWidget {
                 color: AppColors.primary,
               ),
             ),
-
             const SizedBox(height: 24),
-
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const CircleAvatar(
                 backgroundColor: Color(0xFFE3F2FD),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: Colors.blue,
-                ),
+                child: Icon(Icons.lock_outline, color: Colors.blue),
               ),
               title: const Text("Ubah Password"),
               subtitle: const Text(
                 "Perbarui password akun Anda secara berkala.",
               ),
               trailing: OutlinedButton(
-                onPressed: () {},
+                onPressed: () => context.go(RouteName.profile),
                 child: const Text("Ubah"),
               ),
             ),
-
             const Divider(),
-
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFE8F5E9),
-                child: Icon(
-                  Icons.verified_user_outlined,
-                  color: Colors.green,
-                ),
-              ),
-              title: const Text("Two-Factor Authentication"),
-              subtitle: const Text(
-                "Aktifkan keamanan login tambahan.",
-              ),
-              trailing: Switch(
-                value: false,
-                onChanged: (_) {},
-              ),
-            ),
-
-            const Divider(),
-
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFFFF3E0),
-                child: Icon(
-                  Icons.history,
-                  color: Colors.orange,
-                ),
-              ),
-              title: const Text("Riwayat Login"),
-              subtitle: const Text(
-                "Login terakhir: Hari ini, 08:15 WIB",
-              ),
-              trailing: TextButton(
-                onPressed: () {},
-                child: const Text("Lihat"),
-              ),
-            ),
-
-            const Divider(),
-
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFF3E5F5),
-                child: Icon(
-                  Icons.devices_outlined,
-                  color: Colors.purple,
-                ),
-              ),
-              title: const Text("Perangkat Aktif"),
-              subtitle: const Text(
-                "Windows • Chrome Browser",
-              ),
-              trailing: OutlinedButton(
-                onPressed: () {},
-                child: const Text("Kelola"),
-              ),
-            ),
-
-            const Divider(),
-
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const CircleAvatar(
                 backgroundColor: Color(0xFFFFEBEE),
-                child: Icon(
-                  Icons.logout,
-                  color: Colors.red,
-                ),
+                child: Icon(Icons.logout, color: Colors.red),
               ),
               title: const Text("Logout"),
-              subtitle: const Text(
-                "Keluar dari aplikasi ini.",
-              ),
+              subtitle: const Text("Keluar dari aplikasi ini."),
               trailing: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-                onPressed: () {},
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () => _logout(context),
                 icon: const Icon(Icons.logout),
                 label: const Text("Logout"),
               ),

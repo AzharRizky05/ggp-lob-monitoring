@@ -8,6 +8,7 @@ class DashboardSummary {
     this.qcPassed = 0,
     this.qcFailed = 0,
     this.rejectedBatches = 0,
+    this.qcFailedBatches = 0,
   });
 
   final int totalBatches;
@@ -16,8 +17,14 @@ class DashboardSummary {
   final int pendingApprovals;
   final int waitingQc;
   final int qcPassed;
+
+  /// Jumlah HASIL QC "Failed" (dari tabel quality_controls).
   final int qcFailed;
+
   final int rejectedBatches;
+
+  /// Jumlah BATCH berstatus "QC Failed" (dari tabel production_batches).
+  final int qcFailedBatches;
 
   factory DashboardSummary.fromMap(Map<String, dynamic> map) {
     return DashboardSummary(
@@ -29,6 +36,7 @@ class DashboardSummary {
       qcPassed: _toInt(map['qc_passed']),
       qcFailed: _toInt(map['qc_failed']),
       rejectedBatches: _toInt(map['rejected_batches']),
+      qcFailedBatches: _toInt(map['qc_failed_batches']),
     );
   }
 

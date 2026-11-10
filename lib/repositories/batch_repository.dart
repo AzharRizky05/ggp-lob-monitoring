@@ -131,7 +131,7 @@ class BatchRepository {
   }
 
   Future<void> updateBatch(BatchModel batch) async {
-    await _client
+    final updated = await _client
         .from('production_batches')
         .update({
           'batch_code': batch.batchNumber,
@@ -143,15 +143,40 @@ class BatchRepository {
           'current_volume': batch.actualVolume,
           'status': batch.status,
           'notes': batch.notes,
-          'updated_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
-        .eq('id', batch.id);
+        .eq('id', batch.id)
+        .select('id');
+
+    // Kalau RLS memblokir, Supabase tidak error tapi tidak ada baris yang berubah.
+    if (updated.isEmpty) {
+      throw Exception(
+        'Perubahan tidak tersimpan. Periksa izin (RLS) pada tabel production_batches.',
+      );
+    }
   }
 
   Future<void> deleteBatch(String id) async {
-    await _client
-        .from('production_batches')
-        .delete()
-        .eq('id', id);
+    try {
+      final deleted = await _client
+          .from('production_batches')
+          .delete()
+          .eq('id', id)
+          .select('id');
+
+      if (deleted.isEmpty) {
+        throw Exception(
+          'Batch tidak terhapus. Periksa izin (RLS) pada tabel production_batches.',
+        );
+      }
+    } on PostgrestException catch (e) {
+      // 23503 = masih direferensikan tabel lain (monitoring, QC, approval).
+      if (e.code == '23503') {
+        throw Exception(
+          'Batch tidak dapat dihapus karena sudah memiliki data monitoring, QC, atau approval.',
+        );
+      }
+      throw Exception(e.message);
+    }
   }
 }

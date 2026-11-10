@@ -5,6 +5,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/batch_provider.dart';
 import '../../../providers/monitoring_provider.dart';
 import '../../../shared/widgets/layout/app_layout.dart';
+import '../models/monitoring_model.dart';
 import '../widgets/monitoring_header.dart';
 import '../widgets/monitoring_search.dart';
 import '../widgets/monitoring_table.dart';
@@ -25,6 +26,11 @@ class _MonitoringPageState extends State<MonitoringPage> {
   void initState() {
     super.initState();
 
+    // Setiap ketikan di kolom cari menyaring ulang daftar.
+    _searchController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
@@ -40,6 +46,23 @@ class _MonitoringPageState extends State<MonitoringPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  bool get _hasFilter =>
+      _selectedStatus != "Semua" || _searchController.text.trim().isNotEmpty;
+
+  List<MonitoringModel> _applyFilter(List<MonitoringModel> items) {
+    final query = _searchController.text.trim().toLowerCase();
+
+    return items.where((item) {
+      if (_selectedStatus != "Semua" && item.status != _selectedStatus) {
+        return false;
+      }
+      if (query.isEmpty) return true;
+
+      return item.batchCode.toLowerCase().contains(query) ||
+          item.operatorName.toLowerCase().contains(query);
+    }).toList();
   }
 
   @override
@@ -93,10 +116,16 @@ class _MonitoringPageState extends State<MonitoringPage> {
               /// TABLE
               Consumer<MonitoringProvider>(
                 builder: (context, provider, child) {
+                  final filtered = _applyFilter(provider.monitoring);
+
                   return MonitoringTable(
-                    monitoring: provider.monitoring,
+                    monitoring: filtered,
                     loading: provider.loading,
                     isOperator: isOperator,
+                    emptyMessage:
+                        _hasFilter && provider.monitoring.isNotEmpty
+                            ? "Tidak ada data monitoring yang sesuai pencarian."
+                            : "Belum ada data monitoring.",
                   );
                 },
               ),

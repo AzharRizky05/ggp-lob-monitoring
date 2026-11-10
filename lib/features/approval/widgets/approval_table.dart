@@ -8,7 +8,10 @@ import 'approval_action_dialog.dart';
 import 'approval_status_chip.dart';
 
 class ApprovalTable extends StatefulWidget {
-  const ApprovalTable({super.key});
+  const ApprovalTable({super.key, this.query = ''});
+
+  /// Kata kunci pencarian dari halaman (kode batch atau operator).
+  final String query;
 
   @override
   State<ApprovalTable> createState() => _ApprovalTableState();
@@ -19,8 +22,23 @@ class _ApprovalTableState extends State<ApprovalTable> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<ApprovalProvider>().loadApprovals();
     });
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
+  bool _matches(ApprovalModel item) {
+    final query = widget.query.trim().toLowerCase();
+    if (query.isEmpty) return true;
+
+    return item.batchCode.toLowerCase().contains(query) ||
+        item.operatorName.toLowerCase().contains(query);
   }
 
   Future<bool> _confirm({
@@ -106,22 +124,20 @@ class _ApprovalTableState extends State<ApprovalTable> {
     return Consumer<ApprovalProvider>(
       builder: (context, provider, _) {
         if (provider.loading) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
+          return const _StateCard(child: CircularProgressIndicator());
         }
 
         if (provider.approvals.isEmpty) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(40),
-              child: Center(
-                child: Text("Belum ada batch yang menunggu approval."),
-              ),
-            ),
+          return const _StateCard(
+            child: Text("Belum ada batch yang menunggu approval."),
+          );
+        }
+
+        final approvals = provider.approvals.where(_matches).toList();
+
+        if (approvals.isEmpty) {
+          return const _StateCard(
+            child: Text("Tidak ada batch yang sesuai pencarian."),
           );
         }
 
@@ -145,7 +161,7 @@ class _ApprovalTableState extends State<ApprovalTable> {
                 DataColumn(label: Text("Tanggal")),
                 DataColumn(label: Text("Aksi")),
               ],
-              rows: provider.approvals.map((item) {
+              rows: approvals.map((item) {
                 return DataRow(
                   cells: [
                     DataCell(Text(item.batchCode)),
@@ -153,11 +169,7 @@ class _ApprovalTableState extends State<ApprovalTable> {
                     DataCell(Text(item.ph.toStringAsFixed(2))),
                     DataCell(Text(item.qcResult)),
                     DataCell(ApprovalStatusChip(status: item.status)),
-                    DataCell(
-                      Text(
-                        "${item.productionDate.day}/${item.productionDate.month}/${item.productionDate.year}",
-                      ),
-                    ),
+                    DataCell(Text(_formatDate(item.productionDate))),
                     DataCell(
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -197,6 +209,22 @@ class _ApprovalTableState extends State<ApprovalTable> {
           ),
         );
       },
+    );
+  }
+}
+
+class _StateCard extends StatelessWidget {
+  const _StateCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Center(child: child),
+      ),
     );
   }
 }

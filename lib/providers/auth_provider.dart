@@ -64,6 +64,11 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Memuat ulang profil user yang sedang login (setelah Edit Profil).
+  Future<void> refreshProfile() async {
+    await _loadCurrentSession();
+  }
+
   Future<void> _loadCurrentSession() async {
     final user = currentUser;
 
@@ -85,10 +90,7 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> login({required String email, required String password}) async {
     try {
       _loading = true;
       _errorMessage = null;
@@ -105,6 +107,16 @@ class AuthProvider extends ChangeNotifier {
       }
 
       await _loadCurrentSession();
+
+      final profile = _userProfile;
+      if (profile != null && !profile.isActive) {
+        await _repository.signOut();
+        _userProfile = null;
+        _isAuthenticated = false;
+        _errorMessage = 'Akun Anda tidak aktif. Hubungi Administrator.';
+        return false;
+      }
+
       return true;
     } catch (e) {
       _errorMessage = e.toString();

@@ -1,173 +1,123 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_name.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../batch/widgets/batch_status_chip.dart';
 import '../models/dashboard_data.dart';
 
 class OperatorRecentActivity extends StatelessWidget {
-  final List<RecentBatchItem> items;
-  final bool loading;
-
   const OperatorRecentActivity({
     super.key,
     this.items = const [],
     this.loading = false,
   });
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return Colors.grey;
-      case 'persiapan':
-        return Colors.orange;
-      case 'produksi':
-        return Colors.blue;
-      case 'quality control':
-        return Colors.purple;
-      case 'selesai':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return Icons.description_rounded;
-      case 'persiapan':
-        return Icons.settings_rounded;
-      case 'produksi':
-        return Icons.play_circle_rounded;
-      case 'quality control':
-        return Icons.science_rounded;
-      case 'selesai':
-        return Icons.check_circle_rounded;
-      default:
-        return Icons.info_rounded;
-    }
-  }
+  final List<RecentBatchItem> items;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Aktivitas Produksi Terbaru",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Batch Terbaru",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.go(RouteName.batch),
+                  child: const Text("Lihat Semua"),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             if (loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Text('Memuat batch terbaru...'),
               )
             else if (items.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.inbox_rounded,
-                        size: 64,
-                        color: Colors.grey.shade300,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Belum ada aktivitas terbaru",
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'Belum ada batch. Buat batch pertama Anda di menu Production Batch.',
                 ),
               )
             else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length > 5 ? 5 : items.length,
-                separatorBuilder: (context, index) => const Divider(height: 24),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final statusColor = _getStatusColor(item.status);
-                  final statusIcon = _getStatusIcon(item.status);
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: statusColor.withValues(alpha: 0.15),
-                        child: Icon(
-                          statusIcon,
-                          color: statusColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.batchCode,
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Status: ${item.status}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: statusColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.operatorName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        item.updatedAt,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              for (int i = 0; i < items.length; i++) ...[
+                _tile(items[i]),
+                if (i < items.length - 1) const Divider(),
+              ],
           ],
         ),
       ),
     );
+  }
+
+  Widget _tile(RecentBatchItem item) {
+    final color = _statusColor(item.status);
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Icon(Icons.inventory_2_outlined, color: color),
+      ),
+      title: Text(
+        item.batchCode,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: BatchStatusChip(status: item.status),
+        ),
+      ),
+      trailing: Text(
+        _formatTime(item.updatedAt),
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Completed':
+        return Colors.green;
+      case 'Rejected':
+      case 'QC Failed':
+        return Colors.red;
+      case 'Waiting Approval':
+        return Colors.purple;
+      case 'QC Pending':
+        return Colors.orange;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _formatTime(String raw) {
+    final date = DateTime.tryParse(raw)?.toLocal();
+    if (date == null) return raw;
+
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)}/${date.year} '
+        '${two(date.hour)}:${two(date.minute)}';
   }
 }

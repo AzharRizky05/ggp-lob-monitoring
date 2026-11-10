@@ -1,61 +1,63 @@
 class UserModel {
-  final String id;
-  final String nama;
-  final String email;
-  final String role;
-  final String status;
-  final DateTime terakhirLogin;
-
   const UserModel({
     required this.id,
-    required this.nama,
+    required this.authId,
+    required this.fullName,
     required this.email,
-    required this.role,
-    required this.status,
-    required this.terakhirLogin,
+    required this.phone,
+    required this.roleId,
+    required this.roleName,
+    required this.isActive,
+    required this.createdAt,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
+  final String id;
+  final String authId;
+  final String fullName;
+  final String email;
+  final String? phone;
+  final int roleId;
+  final String roleName;
+  final bool isActive;
+  final DateTime? createdAt;
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    final role = map['roles'];
+
     return UserModel(
-      id: json['id'] ?? '',
-      nama: json['nama'] ?? '',
-      email: json['email'] ?? '',
-      role: json['role'] ?? '',
-      status: json['status'] ?? '',
-      terakhirLogin:
-          DateTime.tryParse(json['terakhir_login'] ?? '') ??
-              DateTime.now(),
+      id: (map['id'] ?? '').toString(),
+      authId: (map['auth_id'] ?? '').toString(),
+      fullName: (map['full_name'] ?? '').toString(),
+      email: (map['email'] ?? '').toString(),
+      phone: map['phone']?.toString(),
+      roleId: (map['role_id'] as num?)?.toInt() ?? 0,
+      roleName: role is Map ? (role['role_name'] ?? '-').toString() : '-',
+      isActive: map['is_active'] == true,
+      createdAt:
+          DateTime.tryParse((map['created_at'] ?? '').toString())?.toLocal(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'nama': nama,
-      'email': email,
-      'role': role,
-      'status': status,
-      'terakhir_login':
-          terakhirLogin.toIso8601String(),
-    };
+  String get statusLabel => isActive ? 'Aktif' : 'Nonaktif';
+
+  String get phoneLabel {
+    final value = phone?.trim() ?? '';
+    return value.isEmpty ? '-' : value;
   }
 
-  UserModel copyWith({
-    String? id,
-    String? nama,
-    String? email,
-    String? role,
-    String? status,
-    DateTime? terakhirLogin,
-  }) {
-    return UserModel(
-      id: id ?? this.id,
-      nama: nama ?? this.nama,
-      email: email ?? this.email,
-      role: role ?? this.role,
-      status: status ?? this.status,
-      terakhirLogin:
-          terakhirLogin ?? this.terakhirLogin,
-    );
+  String get createdLabel {
+    final date = createdAt;
+    if (date == null) return '-';
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
+}
+
+/// Pilihan role untuk dropdown (dari tabel roles).
+class RoleOption {
+  const RoleOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
 }

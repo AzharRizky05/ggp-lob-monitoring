@@ -1,4 +1,4 @@
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
@@ -18,11 +18,9 @@ class SettingsHeader extends StatelessWidget {
             color: AppColors.primary,
           ),
         ),
-
         const SizedBox(height: 8),
-
         Text(
-          "Kelola profil pengguna, informasi perusahaan, keamanan akun, dan preferensi notifikasi aplikasi.",
+          "Kelola profil pengguna, informasi perusahaan, dan keamanan akun.",
           style: TextStyle(
             fontSize: 15,
             color: Colors.grey.shade600,

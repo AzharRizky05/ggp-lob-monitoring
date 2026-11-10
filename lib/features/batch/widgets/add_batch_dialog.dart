@@ -20,6 +20,9 @@ class AddBatchDialog extends StatefulWidget {
 }
 
 class _AddBatchDialogState extends State<AddBatchDialog> {
+  static const List<String> _shifts = ["Pagi", "Siang", "Malam"];
+  static const List<String> _tanks = ["Tank A", "Tank B", "Tank C", "Tank D"];
+
   final _formKey = GlobalKey<FormState>();
   final BatchRepository _repository = BatchRepository();
 
@@ -31,7 +34,9 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
 
   String _selectedShift = "Pagi";
   String _selectedTank = "Tank A";
-  final String _selectedStatus = "Preparation";
+
+  /// Status awal untuk batch baru. Saat edit, status asli batch dipertahankan.
+  final String _initialStatus = "Preparation";
 
   bool _saving = false;
 
@@ -55,7 +60,9 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
       final batch = widget.batch!;
 
       _batchNumberController.text = batch.batchNumber;
-      _targetVolumeController.text = batch.targetVolume.toString();
+      _targetVolumeController.text = batch.targetVolume == batch.targetVolume.roundToDouble()
+          ? batch.targetVolume.toStringAsFixed(0)
+          : batch.targetVolume.toString();
       _notesController.text = batch.notes;
 
       _productionDate = batch.productionDate;
@@ -72,6 +79,26 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
     _targetVolumeController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  double? _parseVolume(String value) =>
+      double.tryParse(value.trim().replaceAll(',', '.'));
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
+  /// Pilihan dropdown. Nilai yang sudah tersimpan tetap ikut ditampilkan
+  /// walau di luar daftar standar, supaya dialog tidak error.
+  List<DropdownMenuItem<String>> _items(List<String> base, String current) {
+    final values = [...base];
+    if (!values.contains(current)) values.add(current);
+
+    return values
+        .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+        .toList();
   }
 
   Future<void> _pickDate() async {
@@ -112,19 +139,22 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
       _saving = true;
     });
 
+    final existing = widget.batch;
+
     final batch = BatchModel(
-      id: isEdit ? widget.batch!.id : const Uuid().v4(),
+      id: existing?.id ?? const Uuid().v4(),
       batchNumber: _batchNumberController.text.trim(),
       productionDate: _productionDate,
       shift: _selectedShift,
       tank: _selectedTank,
-      operatorId: profile.id,
-      operatorName: profile.fullName,
-      targetVolume: double.parse(_targetVolumeController.text),
-      actualVolume: 0,
-      status: _selectedStatus,
+      // Saat edit, kepemilikan, status, dan volume batch tidak boleh berubah.
+      operatorId: existing?.operatorId ?? profile.id,
+      operatorName: existing?.operatorName ?? profile.fullName,
+      targetVolume: _parseVolume(_targetVolumeController.text)!,
+      actualVolume: existing?.actualVolume ?? 0,
+      status: existing?.status ?? _initialStatus,
       notes: _notesController.text.trim(),
-      createdAt: DateTime.now(),
+      createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
@@ -142,16 +172,18 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Batch berhasil dibuat."),
+        SnackBar(
+          content: Text(
+            isEdit ? "Batch berhasil diperbarui." : "Batch berhasil dibuat.",
+          ),
         ),
       );
     } else {
+      final error = batchProvider.errorMessage?.replaceFirst('Exception: ', '');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            batchProvider.errorMessage ?? "Gagal menyimpan batch.",
-          ),
+          content: Text(error ?? "Gagal menyimpan batch."),
         ),
       );
     }
@@ -196,9 +228,7 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
                       border: OutlineInputBorder(),
                       suffixIcon: Icon(Icons.calendar_today),
                     ),
-                    child: Text(
-                      "${_productionDate.day}/${_productionDate.month}/${_productionDate.year}",
-                    ),
+                    child: Text(_formatDate(_productionDate)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -208,14 +238,10 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
                     labelText: "Shift",
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: "Pagi", child: Text("Pagi")),
-                    DropdownMenuItem(value: "Siang", child: Text("Siang")),
-                    DropdownMenuItem(value: "Malam", child: Text("Malam")),
-                  ],
+                  items: _items(_shifts, _selectedShift),
                   onChanged: (value) {
                     setState(() {
-                      _selectedShift = value!;
+                      _selectedShift = value ?? _selectedShift;
                     });
                   },
                 ),
@@ -226,15 +252,10 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
                     labelText: "Tangki Produksi",
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: "Tank A", child: Text("Tank A")),
-                    DropdownMenuItem(value: "Tank B", child: Text("Tank B")),
-                    DropdownMenuItem(value: "Tank C", child: Text("Tank C")),
-                    DropdownMenuItem(value: "Tank D", child: Text("Tank D")),
-                  ],
+                  items: _items(_tanks, _selectedTank),
                   onChanged: (value) {
                     setState(() {
-                      _selectedTank = value!;
+                      _selectedTank = value ?? _selectedTank;
                     });
                   },
                 ),
@@ -250,11 +271,15 @@ class _AddBatchDialogState extends State<AddBatchDialog> {
                     suffixText: "L",
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return "Target volume wajib diisi";
                     }
-                    if (double.tryParse(value) == null) {
+                    final number = _parseVolume(value);
+                    if (number == null) {
                       return "Masukkan angka yang valid";
+                    }
+                    if (number <= 0) {
+                      return "Target volume harus lebih dari 0";
                     }
                     return null;
                   },

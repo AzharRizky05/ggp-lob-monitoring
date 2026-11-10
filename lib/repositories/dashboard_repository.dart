@@ -54,6 +54,7 @@ class DashboardRepository {
       pendingApprovals: countStatus((s) => s == 'Waiting Approval'),
       waitingQc: countStatus((s) => s == 'QC Pending'),
       rejectedBatches: countStatus((s) => s == 'Rejected'),
+      qcFailedBatches: countStatus((s) => s == 'QC Failed'),
       qcPassed: qc['Passed'] ?? 0,
       qcFailed: qc['Failed'] ?? 0,
     );

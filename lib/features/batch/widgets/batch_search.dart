@@ -1,7 +1,31 @@
 import 'package:flutter/material.dart';
 
 class BatchSearch extends StatelessWidget {
-  const BatchSearch({super.key});
+  const BatchSearch({
+    super.key,
+    required this.controller,
+    required this.selectedStatus,
+    required this.onStatusChanged,
+  });
+
+  final TextEditingController controller;
+  final String selectedStatus;
+  final ValueChanged<String?> onStatusChanged;
+
+  static const List<String> _statuses = [
+    "Semua",
+    "Draft",
+    "Preparation",
+    "Mixing",
+    "Fermentation",
+    "Filtering",
+    "Packaging",
+    "QC Pending",
+    "QC Failed",
+    "Waiting Approval",
+    "Rejected",
+    "Completed",
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -10,6 +34,7 @@ class BatchSearch extends StatelessWidget {
         Expanded(
           flex: 3,
           child: TextField(
+            controller: controller,
             decoration: InputDecoration(
               hintText: "Cari kode batch atau operator...",
               prefixIcon: const Icon(Icons.search),
@@ -22,50 +47,26 @@ class BatchSearch extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(width: 16),
-
         SizedBox(
           width: 240,
           child: DropdownButtonFormField<String>(
-            initialValue: "Semua",
+            initialValue: selectedStatus,
             decoration: InputDecoration(
               labelText: "Status Produksi",
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            items: const [
-              DropdownMenuItem(
-                value: "Semua",
-                child: Text("Semua"),
-              ),
-              DropdownMenuItem(
-                value: "Persiapan Bahan",
-                child: Text("Persiapan Bahan"),
-              ),
-              DropdownMenuItem(
-                value: "Pencampuran",
-                child: Text("Pencampuran"),
-              ),
-              DropdownMenuItem(
-                value: "Fermentasi",
-                child: Text("Fermentasi"),
-              ),
-              DropdownMenuItem(
-                value: "Quality Control",
-                child: Text("Quality Control"),
-              ),
-              DropdownMenuItem(
-                value: "Pengemasan",
-                child: Text("Pengemasan"),
-              ),
-              DropdownMenuItem(
-                value: "Selesai",
-                child: Text("Selesai"),
-              ),
-            ],
-            onChanged: (value) {},
+            items: _statuses
+                .map(
+                  (status) => DropdownMenuItem(
+                    value: status,
+                    child: Text(status),
+                  ),
+                )
+                .toList(),
+            onChanged: onStatusChanged,
           ),
         ),
       ],

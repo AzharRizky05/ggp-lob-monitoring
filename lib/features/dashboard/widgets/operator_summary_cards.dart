@@ -6,116 +6,30 @@ import '../../../core/theme/app_colors.dart';
 class OperatorSummaryCards extends StatelessWidget {
   final int totalBatches;
   final int activeBatches;
+  final int inReview;
   final int completedBatches;
-  final int pendingApprovals;
+  final int needsAttention;
   final bool loading;
 
   const OperatorSummaryCards({
     super.key,
     this.totalBatches = 0,
     this.activeBatches = 0,
+    this.inReview = 0,
     this.completedBatches = 0,
-    this.pendingApprovals = 0,
+    this.needsAttention = 0,
     this.loading = false,
   });
 
-  Widget _buildCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(
-                icon,
-                color: color,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return GridView.count(
-        crossAxisCount: 4,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.2,
-        children: List.generate(
-          4,
-          (index) => Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(20),
-              child: Center(
-                child: SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (totalBatches == 0 &&
+    final isEmpty = totalBatches == 0 &&
         activeBatches == 0 &&
+        inReview == 0 &&
         completedBatches == 0 &&
-        pendingApprovals == 0) {
+        needsAttention == 0;
+
+    if (!loading && isEmpty) {
       return Card(
         elevation: 1,
         shape: RoundedRectangleBorder(
@@ -156,54 +70,151 @@ class OperatorSummaryCards extends StatelessWidget {
       );
     }
 
+    String value(int number) => loading ? "--" : number.toString();
+
+    final items = [
+      _CardData(
+        title: "Production Batch Saya",
+        value: value(totalBatches),
+        subtitle: "Semua batch yang Anda buat",
+        icon: Icons.inventory_2_rounded,
+        color: AppColors.primary,
+      ),
+      _CardData(
+        title: "Sedang Diproses",
+        value: value(activeBatches),
+        subtitle: "Batch dalam proses produksi",
+        icon: Icons.precision_manufacturing_rounded,
+        color: Colors.orange,
+      ),
+      _CardData(
+        title: "Menunggu QC / Approval",
+        value: value(inReview),
+        subtitle: "Menunggu pemeriksaan atau persetujuan",
+        icon: Icons.science_rounded,
+        color: Colors.amber.shade700,
+      ),
+      _CardData(
+        title: "Completed",
+        value: value(completedBatches),
+        subtitle: "Batch telah selesai diproduksi",
+        icon: Icons.task_alt_rounded,
+        color: Colors.green,
+      ),
+      _CardData(
+        title: "Tidak Lolos",
+        value: value(needsAttention),
+        subtitle: "QC Failed atau ditolak Supervisor",
+        icon: Icons.warning_amber_rounded,
+        color: Colors.red,
+      ),
+    ];
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 1000;
-        final crossAxisCount = isMobile ? 2 : 4;
+        final width = constraints.maxWidth;
+        final columns = width >= 1100
+            ? 5
+            : width >= 800
+                ? 3
+                : width >= 520
+                    ? 2
+                    : 1;
 
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
+        return GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.1,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 20,
-          children: [
-            _buildCard(
-              context,
-              title: "Production Batch Saya",
-              value: totalBatches.toString(),
-              subtitle: "Semua batch yang Anda buat",
-              icon: Icons.inventory_2_rounded,
-              color: AppColors.primary,
-            ),
-            _buildCard(
-              context,
-              title: "Sedang Diproses",
-              value: activeBatches.toString(),
-              subtitle: "Batch dalam proses produksi",
-              icon: Icons.precision_manufacturing_rounded,
-              color: Colors.orange,
-            ),
-            _buildCard(
-              context,
-              title: "QC Pending",
-              value: pendingApprovals.toString(),
-              subtitle: "Menunggu pemeriksaan Quality Control",
-              icon: Icons.science_rounded,
-              color: Colors.amber,
-            ),
-            _buildCard(
-              context,
-              title: "Completed",
-              value: completedBatches.toString(),
-              subtitle: "Batch telah selesai diproduksi",
-              icon: Icons.task_alt_rounded,
-              color: Colors.green,
-            ),
-          ],
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            mainAxisExtent: 140,
+          ),
+          children: items.map((item) => _SummaryCard(data: item)).toList(),
         );
       },
+    );
+  }
+}
+
+class _CardData {
+  const _CardData({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final String value;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.data});
+
+  final _CardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: data.color.withValues(alpha: 0.15),
+              child: Icon(data.icon, color: data.color, size: 28),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    data.value,
+                    maxLines: 1,
+                    style: GoogleFonts.poppins(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: data.color,
+                    ),
+                  ),
+                  Text(
+                    data.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

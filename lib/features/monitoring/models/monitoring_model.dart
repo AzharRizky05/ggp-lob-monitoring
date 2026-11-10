@@ -23,6 +23,10 @@ class MonitoringModel {
 
   final String createdBy;
 
+  /// Tahap produksi saat log ini dicatat (kolom production_logs.stage).
+  /// Kosong untuk data lama yang dibuat sebelum kolom ini ada.
+  final String stage;
+
   /// data tambahan hasil JOIN
   final String batchCode;
 
@@ -43,6 +47,7 @@ class MonitoringModel {
     required this.flowRate,
     required this.remarks,
     required this.createdBy,
+    this.stage = '',
     this.batchCode = '',
     this.operatorName = '',
     this.status = '',
@@ -90,6 +95,8 @@ class MonitoringModel {
 
       createdBy: map['created_by'].toString(),
 
+      stage: (map['stage'] ?? '').toString(),
+
       batchCode: batch['batch_code'] ?? '',
 
       status: batch['status'] ?? '',
@@ -102,7 +109,7 @@ class MonitoringModel {
     return {
       'id': id,
       'batch_id': batchId,
-      'recorded_at': recordedAt.toIso8601String(),
+      'recorded_at': recordedAt.toUtc().toIso8601String(),
       'temperature': temperature,
       'ph': ph,
       'brix': brix,
@@ -112,6 +119,8 @@ class MonitoringModel {
       'flow_rate': flowRate,
       'remarks': remarks,
       'created_by': createdBy,
+      // Hanya dikirim kalau terisi, supaya edit tidak menimpa tahap yang sudah tercatat.
+      if (stage.isNotEmpty) 'stage': stage,
     };
   }
 }

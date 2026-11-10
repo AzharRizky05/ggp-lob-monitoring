@@ -1,106 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class ReportFilter extends StatefulWidget {
+import '../models/report_model.dart';
+import '../providers/report_provider.dart';
+
+class ReportFilter extends StatelessWidget {
   const ReportFilter({super.key});
 
   @override
-  State<ReportFilter> createState() => _ReportFilterState();
-}
-
-class _ReportFilterState extends State<ReportFilter> {
-  String bulan = "Mei";
-  String tahun = "2026";
-  String status = "Semua";
-
-  @override
   Widget build(BuildContext context) {
-    return Row(
+    final provider = context.watch<ReportProvider>();
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
       children: [
         SizedBox(
-          width: 220,
-          child: DropdownButtonFormField<String>(
-            initialValue: bulan,
-            decoration: const InputDecoration(
-              labelText: "Bulan",
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: "Januari", child: Text("Januari")),
-              DropdownMenuItem(value: "Februari", child: Text("Februari")),
-              DropdownMenuItem(value: "Maret", child: Text("Maret")),
-              DropdownMenuItem(value: "April", child: Text("April")),
-              DropdownMenuItem(value: "Mei", child: Text("Mei")),
-              DropdownMenuItem(value: "Juni", child: Text("Juni")),
-              DropdownMenuItem(value: "Juli", child: Text("Juli")),
-              DropdownMenuItem(value: "Agustus", child: Text("Agustus")),
-              DropdownMenuItem(value: "September", child: Text("September")),
-              DropdownMenuItem(value: "Oktober", child: Text("Oktober")),
-              DropdownMenuItem(value: "November", child: Text("November")),
-              DropdownMenuItem(value: "Desember", child: Text("Desember")),
-            ],
-            onChanged: (value) {
-              setState(() {
-                bulan = value!;
-              });
-            },
-          ),
-        ),
-
-        const SizedBox(width: 16),
-
-        SizedBox(
           width: 160,
-          child: DropdownButtonFormField<String>(
-            initialValue: tahun,
+          child: DropdownButtonFormField<int>(
+            initialValue: provider.year,
             decoration: const InputDecoration(
               labelText: "Tahun",
               border: OutlineInputBorder(),
             ),
-            items: const [
-              DropdownMenuItem(value: "2025", child: Text("2025")),
-              DropdownMenuItem(value: "2026", child: Text("2026")),
-              DropdownMenuItem(value: "2027", child: Text("2027")),
-            ],
+            items: provider.years
+                .map(
+                  (year) => DropdownMenuItem<int>(
+                    value: year,
+                    child: Text(year.toString()),
+                  ),
+                )
+                .toList(),
             onChanged: (value) {
-              setState(() {
-                tahun = value!;
-              });
+              if (value != null) provider.setYear(value);
             },
           ),
         ),
-
-        const SizedBox(width: 16),
-
         SizedBox(
           width: 220,
+          child: DropdownButtonFormField<int>(
+            initialValue: provider.month,
+            decoration: const InputDecoration(
+              labelText: "Bulan",
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<int>(
+                value: 0,
+                child: Text("Semua Bulan"),
+              ),
+              for (int i = 0; i < 12; i++)
+                DropdownMenuItem<int>(
+                  value: i + 1,
+                  child: Text(reportMonthNames[i]),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) provider.setMonth(value);
+            },
+          ),
+        ),
+        SizedBox(
+          width: 240,
           child: DropdownButtonFormField<String>(
-            initialValue: status,
+            initialValue: provider.statusLabel,
             decoration: const InputDecoration(
               labelText: "Status Batch",
               border: OutlineInputBorder(),
             ),
-            items: const [
-              DropdownMenuItem(
-                value: "Semua",
-                child: Text("Semua"),
-              ),
-              DropdownMenuItem(
-                value: "Berjalan",
-                child: Text("Berjalan"),
-              ),
-              DropdownMenuItem(
-                value: "Selesai",
-                child: Text("Selesai"),
-              ),
-              DropdownMenuItem(
-                value: "Terlambat",
-                child: Text("Terlambat"),
-              ),
-            ],
+            items: ReportStatusOption.options
+                .map(
+                  (option) => DropdownMenuItem<String>(
+                    value: option.label,
+                    child: Text(option.label),
+                  ),
+                )
+                .toList(),
             onChanged: (value) {
-              setState(() {
-                status = value!;
-              });
+              if (value != null) provider.setStatusLabel(value);
             },
           ),
         ),

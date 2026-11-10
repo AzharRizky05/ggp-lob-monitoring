@@ -1,20 +1,37 @@
 import 'package:flutter/material.dart';
 
+import '../../batch/widgets/batch_status_chip.dart';
+import '../../history/widgets/history_status_chip.dart';
 import '../models/qc_model.dart';
-import 'qc_result_chip.dart';
-import 'qc_status_chip.dart';
+import 'edit_qc_dialog.dart';
+import 'qc_detail_dialog.dart';
 
 class QcTable extends StatelessWidget {
   final List<QcModel> qualityControls;
   final bool loading;
   final bool isQc;
+  final String emptyMessage;
 
   const QcTable({
     super.key,
     required this.qualityControls,
     required this.loading,
     this.isQc = false,
+    this.emptyMessage = "Belum ada data Quality Control",
   });
+
+  /// QC hanya boleh mengoreksi hasil selama batch belum diputuskan Supervisor.
+  static const Set<String> _editableStatuses = {
+    'Waiting Approval',
+    'QC Passed',
+    'QC Failed',
+  };
+
+  String _formatDate(DateTime date) {
+    final local = date.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(local.day)}/${two(local.month)}/${local.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,13 +45,13 @@ class QcTable extends StatelessWidget {
     }
 
     if (qualityControls.isEmpty) {
-      return const Card(
+      return Card(
         child: SizedBox(
           height: 220,
           child: Center(
             child: Text(
-              "Belum ada data Quality Control",
-              style: TextStyle(fontSize: 16),
+              emptyMessage,
+              style: const TextStyle(fontSize: 16),
             ),
           ),
         ),
@@ -62,6 +79,8 @@ class QcTable extends StatelessWidget {
             DataColumn(label: Text("Action")),
           ],
           rows: qualityControls.map((item) {
+            final editable = _editableStatuses.contains(item.status);
+
             return DataRow(
               cells: [
                 DataCell(
@@ -72,57 +91,39 @@ class QcTable extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                DataCell(
-                  Text(item.qcName),
-                ),
-
-                DataCell(
-                  Text(
-                    item.ph.toStringAsFixed(1),
-                  ),
-                ),
-
-                DataCell(
-                  QcResultChip(
-                    hasilUji: item.result,
-                  ),
-                ),
-
-                DataCell(
-                  QcStatusChip(
-                    status: item.status,
-                  ),
-                ),
-
-                DataCell(
-                  Text(
-                    "${item.inspectionDate.day}/${item.inspectionDate.month}/${item.inspectionDate.year}",
-                  ),
-                ),
-
+                DataCell(Text(item.qcName)),
+                DataCell(Text(item.ph.toStringAsFixed(1))),
+                DataCell(HistoryStatusChip(status: item.result)),
+                DataCell(BatchStatusChip(status: item.status)),
+                DataCell(Text(_formatDate(item.inspectionDate))),
                 DataCell(
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         tooltip: "Detail",
-                        icon: const Icon(
-                          Icons.visibility_outlined,
-                        ),
+                        icon: const Icon(Icons.visibility_outlined),
                         onPressed: () {
-                          // TODO Detail QC
+                          showDialog(
+                            context: context,
+                            builder: (_) => QcDetailDialog(qc: item),
+                          );
                         },
                       ),
-
                       if (isQc)
                         IconButton(
-                          tooltip: "Edit",
-                          icon: const Icon(
-                            Icons.edit_outlined,
-                          ),
-                          onPressed: () {
-                            // TODO Edit QC
-                          },
+                          tooltip: editable
+                              ? "Edit"
+                              : "Tidak dapat diedit: batch sudah diputuskan Supervisor",
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: editable
+                              ? () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => EditQcDialog(qc: item),
+                                  );
+                                }
+                              : null,
                         ),
                     ],
                   ),

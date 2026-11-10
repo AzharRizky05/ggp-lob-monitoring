@@ -1,42 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/report_provider.dart';
+import '../services/report_service.dart';
 
 class ExportButton extends StatelessWidget {
   const ExportButton({super.key});
 
+  void _export(BuildContext context) {
+    final provider = context.read<ReportProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final rows = provider.rows;
+
+    if (rows.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tidak ada data untuk diexport.')),
+      );
+      return;
+    }
+
+    ReportService.downloadCsv(
+      fileName: provider.exportFileName,
+      content: ReportService.buildCsv(rows),
+    );
+
+    messenger.showSnackBar(
+      SnackBar(content: Text('Laporan berhasil diexport (${rows.length} batch).')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        FilledButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Fitur Export PDF akan tersedia setelah integrasi database.",
-                ),
-              ),
-            );
-          },
-          icon: const Icon(Icons.picture_as_pdf),
-          label: const Text("Export PDF"),
-        ),
+    final loading = context.select<ReportProvider, bool>((p) => p.loading);
 
-        const SizedBox(width: 16),
-
-        OutlinedButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Fitur Export Excel akan tersedia setelah integrasi database.",
-                ),
-              ),
-            );
-          },
-          icon: const Icon(Icons.table_view),
-          label: const Text("Export Excel"),
-        ),
-      ],
+    return FilledButton.icon(
+      onPressed: loading ? null : () => _export(context),
+      icon: const Icon(Icons.download_outlined),
+      label: const Text('Export Excel (CSV)'),
     );
   }
 }

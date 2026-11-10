@@ -15,10 +15,37 @@ class ApprovalPage extends StatefulWidget {
 }
 
 class _ApprovalPageState extends State<ApprovalPage> {
+  final TextEditingController _searchController = TextEditingController();
+
   int _selectedTab = 0;
 
   @override
+  void initState() {
+    super.initState();
+
+    // Setiap ketikan di kolom cari menyaring ulang daftar.
+    _searchController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _selectTab(int index) {
+    if (index == _selectedTab) return;
+
+    _searchController.clear();
+    setState(() => _selectedTab = index);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final query = _searchController.text;
+
     return AppLayout(
       title: "Persetujuan",
       child: SingleChildScrollView(
@@ -30,12 +57,17 @@ class _ApprovalPageState extends State<ApprovalPage> {
             const SizedBox(height: 24),
             _buildTabSelector(),
             const SizedBox(height: 24),
-            if (_selectedTab == 0) ...[
-              const ApprovalSearch(),
-              const SizedBox(height: 24),
-              const ApprovalTable(),
-            ] else
-              const ApprovalHistoryTable(),
+            ApprovalSearch(
+              controller: _searchController,
+              hintText: _selectedTab == 0
+                  ? "Cari kode batch atau operator..."
+                  : "Cari kode batch, operator, atau supervisor...",
+            ),
+            const SizedBox(height: 24),
+            if (_selectedTab == 0)
+              ApprovalTable(query: query)
+            else
+              ApprovalHistoryTable(query: query),
           ],
         ),
       ),
@@ -56,7 +88,7 @@ class _ApprovalPageState extends State<ApprovalPage> {
     final isSelected = _selectedTab == index;
 
     return OutlinedButton(
-      onPressed: () => setState(() => _selectedTab = index),
+      onPressed: () => _selectTab(index),
       style: OutlinedButton.styleFrom(
         backgroundColor: isSelected ? AppColors.primary : Colors.white,
         foregroundColor: isSelected ? Colors.white : AppColors.primary,

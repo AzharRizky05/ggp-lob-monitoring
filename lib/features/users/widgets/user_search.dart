@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class UserSearch extends StatefulWidget {
+import '../providers/user_provider.dart';
+
+class UserSearch extends StatelessWidget {
   const UserSearch({super.key});
 
   @override
-  State<UserSearch> createState() => _UserSearchState();
-}
-
-class _UserSearchState extends State<UserSearch> {
-  String role = "Semua";
-  String status = "Semua";
-
-  @override
   Widget build(BuildContext context) {
+    final provider = context.watch<UserProvider>();
+
+    final roleItems = [
+      UserProvider.allLabel,
+      ...provider.roles.map((role) => role.name),
+    ];
+
     return Row(
       children: [
         Expanded(
           flex: 3,
           child: TextField(
+            onChanged: context.read<UserProvider>().setSearchQuery,
             decoration: InputDecoration(
-              hintText: "Cari nama pengguna atau email...",
+              hintText: "Cari nama atau email...",
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -28,12 +31,11 @@ class _UserSearchState extends State<UserSearch> {
             ),
           ),
         ),
-
         const SizedBox(width: 16),
-
-        Expanded(
+        SizedBox(
+          width: 220,
           child: DropdownButtonFormField<String>(
-            initialValue: role,
+            initialValue: provider.roleFilter,
             decoration: InputDecoration(
               labelText: "Role",
               border: OutlineInputBorder(
@@ -41,45 +43,19 @@ class _UserSearchState extends State<UserSearch> {
               ),
               isDense: true,
             ),
-            items: const [
-              DropdownMenuItem(
-                value: "Semua",
-                child: Text("Semua Role"),
-              ),
-              DropdownMenuItem(
-                value: "Administrator",
-                child: Text("Administrator"),
-              ),
-              DropdownMenuItem(
-                value: "Operator Produksi",
-                child: Text("Operator Produksi"),
-              ),
-              DropdownMenuItem(
-                value: "Quality Control",
-                child: Text("Quality Control"),
-              ),
-              DropdownMenuItem(
-                value: "Supervisor",
-                child: Text("Supervisor"),
-              ),
-              DropdownMenuItem(
-                value: "Viewer",
-                child: Text("Viewer"),
-              ),
-            ],
+            items: roleItems
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
             onChanged: (value) {
-              setState(() {
-                role = value!;
-              });
+              if (value != null) provider.setRoleFilter(value);
             },
           ),
         ),
-
         const SizedBox(width: 16),
-
-        Expanded(
+        SizedBox(
+          width: 180,
           child: DropdownButtonFormField<String>(
-            initialValue: status,
+            initialValue: provider.statusFilter,
             decoration: InputDecoration(
               labelText: "Status",
               border: OutlineInputBorder(
@@ -87,24 +63,11 @@ class _UserSearchState extends State<UserSearch> {
               ),
               isDense: true,
             ),
-            items: const [
-              DropdownMenuItem(
-                value: "Semua",
-                child: Text("Semua Status"),
-              ),
-              DropdownMenuItem(
-                value: "Aktif",
-                child: Text("Aktif"),
-              ),
-              DropdownMenuItem(
-                value: "Nonaktif",
-                child: Text("Nonaktif"),
-              ),
-            ],
+            items: UserProvider.statusOptions
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
             onChanged: (value) {
-              setState(() {
-                status = value!;
-              });
+              if (value != null) provider.setStatusFilter(value);
             },
           ),
         ),

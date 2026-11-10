@@ -44,16 +44,12 @@ class QcSearch extends StatelessWidget {
                 child: Text("Semua Hasil"),
               ),
               DropdownMenuItem(
-                value: "PASS",
-                child: Text("PASS"),
+                value: "Passed",
+                child: Text("Passed"),
               ),
               DropdownMenuItem(
-                value: "FAIL",
-                child: Text("FAIL"),
-              ),
-              DropdownMenuItem(
-                value: "PENDING",
-                child: Text("PENDING"),
+                value: "Failed",
+                child: Text("Failed"),
               ),
             ],
             onChanged: onResultChanged,

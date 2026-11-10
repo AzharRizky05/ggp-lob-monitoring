@@ -81,10 +81,18 @@ class QcRepository {
     debugPrint("========== UPDATE QC ==========");
     debugPrint(qc.toMap().toString());
 
-    await _client
+    final updated = await _client
         .from('quality_controls')
         .update(qc.toMap())
-        .eq('id', qc.id);
+        .eq('id', qc.id)
+        .select('id');
+
+    // Kalau RLS memblokir, Supabase tidak error tapi tidak ada baris yang berubah.
+    if (updated.isEmpty) {
+      throw Exception(
+        'Perubahan tidak tersimpan. Periksa izin (RLS) pada tabel quality_controls.',
+      );
+    }
 
     await _updateBatchStatus(qc);
   }

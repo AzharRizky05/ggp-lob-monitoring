@@ -5,52 +5,66 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/buttons/outline_button.dart';
 import '../../../shared/widgets/cards/section_card.dart';
-import '../models/profile_dummy_data.dart';
+import '../models/profile_view_data.dart';
 
 /// Card kiri: Informasi Profil.
 class ProfileInformationCard extends StatelessWidget {
-  final VoidCallback onEditProfile;
+  const ProfileInformationCard({
+    super.key,
+    required this.profile,
+    required this.onEditProfile,
+  });
 
-  const ProfileInformationCard({super.key, required this.onEditProfile});
+  final ProfileViewData profile;
+  final VoidCallback onEditProfile;
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = profile.isActive ? AppColors.success : AppColors.danger;
+
     final rows = [
       _InfoRow(
         icon: Icons.person_outline,
         iconColor: Colors.blue,
         iconBackground: const Color(0xFFE3F2FD),
         label: 'Nama Lengkap',
-        value: ProfileDummyData.fullName,
+        value: profile.fullName,
       ),
       _InfoRow(
         icon: Icons.mail_outline,
         iconColor: Colors.green,
         iconBackground: const Color(0xFFE8F5E9),
         label: 'Email',
-        value: ProfileDummyData.email,
+        value: profile.email,
+      ),
+      _InfoRow(
+        icon: Icons.phone_outlined,
+        iconColor: Colors.teal,
+        iconBackground: const Color(0xFFE0F2F1),
+        label: 'Telepon',
+        value: profile.phoneLabel,
       ),
       _InfoRow(
         icon: Icons.badge_outlined,
         iconColor: Colors.orange,
         iconBackground: const Color(0xFFFFF3E0),
         label: 'Role',
-        value: ProfileDummyData.role,
+        value: profile.role,
       ),
       _InfoRow(
         icon: Icons.calendar_today_outlined,
         iconColor: Colors.purple,
         iconBackground: const Color(0xFFF3E5F5),
         label: 'Bergabung Sejak',
-        value: ProfileDummyData.joinedDate,
+        value: profile.joinedLabel,
       ),
       _InfoRow(
         icon: Icons.verified_user_outlined,
-        iconColor: AppColors.success,
-        iconBackground: AppColors.success.withValues(alpha: 0.12),
+        iconColor: statusColor,
+        iconBackground: statusColor.withValues(alpha: 0.12),
         label: 'Status Akun',
-        value: ProfileDummyData.status,
-        valueColor: AppColors.success,
+        value: profile.statusLabel,
+        valueColor: statusColor,
       ),
     ];
 
@@ -91,13 +105,6 @@ class ProfileInformationCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-  final String label;
-  final String value;
-  final Color? valueColor;
-
   const _InfoRow({
     required this.icon,
     required this.iconColor,
@@ -106,6 +113,13 @@ class _InfoRow extends StatelessWidget {
     required this.value,
     this.valueColor,
   });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String label;
+  final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {

@@ -66,14 +66,7 @@ class MonitoringRepository {
     MonitoringModel monitoring,
   ) async {
     //
-    // 1. simpan monitoring
-    //
-    await _client.from('production_logs').insert(
-      monitoring.toMap(),
-    );
-
-    //
-    // 2. ambil status batch sekarang
+    // 1. ambil status batch sekarang = tahap produksi yang sedang dicatat
     //
     final batch = await _client
         .from('production_batches')
@@ -84,6 +77,14 @@ class MonitoringRepository {
     final currentStatus = batch['status'].toString();
 
     //
+    // 2. simpan monitoring beserta tahapnya
+    //
+    await _client.from('production_logs').insert({
+      ...monitoring.toMap(),
+      'stage': currentStatus,
+    });
+
+    //
     // 3. hitung status berikutnya
     //
     final nextStatus = OperatorWorkflow.nextStatus(
@@ -91,11 +92,12 @@ class MonitoringRepository {
     );
 
     //
-    // 4. update status batch
+    // 4. update status batch + volume terakhir
     //
     await _client.from('production_batches').update({
       'status': nextStatus,
-      'updated_at': DateTime.now().toIso8601String(),
+      'current_volume': monitoring.volume,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq(
       'id',
       monitoring.batchId,
@@ -105,12 +107,20 @@ class MonitoringRepository {
   Future<void> updateMonitoring(
     MonitoringModel monitoring,
   ) async {
-    await _client
+    final updated = await _client
         .from('production_logs')
         .update(
           monitoring.toMap(),
         )
-        .eq('id', monitoring.id);
+        .eq('id', monitoring.id)
+        .select('id');
+
+    // Kalau RLS memblokir, Supabase tidak error tapi tidak ada baris yang berubah.
+    if (updated.isEmpty) {
+      throw Exception(
+        'Perubahan tidak tersimpan. Periksa izin (RLS) pada tabel production_logs.',
+      );
+    }
   }
 
   Future<void> deleteMonitoring(
